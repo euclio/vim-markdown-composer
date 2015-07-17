@@ -1,0 +1,13 @@
+[package]
+name = "markdown-composer"
+version = "0.1.0"
+authors = ["Andy Russell <arussell123@gmail.com>"]
+description = "A complete solution for previewing markdown."
+
+[dependencies]
+aurelius = "0.1.2"
+docopt = "*"
+env_logger = "0.3.1"
+log = "0.3.1"
+rmp = "0.4.0"
+rustc-serialize = "*"
