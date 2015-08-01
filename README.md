@@ -37,9 +37,7 @@ function! BuildComposer(info)
   endif
 endfunction
 
-Plug 'euclio/vim-markdown-composer', {
-    'do': function('BuildComposer')
-}
+Plug 'euclio/vim-markdown-composer', { 'do': function('BuildComposer') }
 ```
 
 You should run `cargo build --release` in the plugin directory after
