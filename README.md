@@ -11,7 +11,7 @@ This plugin should be considered alpha-quality software.
 
 vim-markdown-composer requires [Python 3], [Rust], [cargo], and [Neovim].
 
-If you haven't already installed the Python plugin host, install it with `pip
+If you haven't already installed the Python 3 plugin host, install it with `pip3
 install neovim`.
 
 Unfortunately, since Neovim only supports Unixes, the plugin will only work on
