@@ -42,6 +42,10 @@ class MarkdownPlugin(object):
         msg = msgpack.packb('\n'.join(self.vim.current.buffer))
         self.client.send(msg)
 
+    def should_autostart(self):
+        "Returns whether the server should start automatically."
+        return self.vim.vars.get('markdown_composer_autostart', True)
+
     @neovim.command('ComposerUpdate', sync=True)
     def send_current_buffer_command(self):
         "Send the current buffer to the client synchronously."
@@ -66,7 +70,7 @@ class MarkdownPlugin(object):
         socket. The server will handle only one connection at a time.
         """
 
-        if self.server is not None:
+        if not self.should_autostart() or self.server is not None:
             return
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

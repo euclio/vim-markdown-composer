@@ -35,6 +35,12 @@ g:markdown_composer_syntax_theme        *g:markdown_composer_syntax_theme*
 
             Default: github
 
+g:markdown_composer_autostart           *g:markdown_composer_autostart*
+            Whether the server should automatically start when a markdown
+            file is opened.
+
+            Default: 1
+
 COMMANDS                                *markdown-composer-commands*
 
 The plugin should start automatically whenever you open a markdown buffer.
