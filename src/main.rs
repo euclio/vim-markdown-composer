@@ -15,7 +15,7 @@ extern crate rustc_serialize;
 use std::io::BufReader;
 use std::net::TcpStream;
 
-use aurelius::Server;
+use aurelius::{Server, ServerHandle};
 use aurelius::browser;
 use docopt::Docopt;
 use msgpack::Decoder;
@@ -45,6 +45,16 @@ struct Args {
     flag_highlight_theme: Option<String>,
 }
 
+fn open_browser(server: &ServerHandle, browser: Option<String>) {
+    let url = format!("http://localhost:{}", server.http_port());
+
+    if let Some(ref browser) = browser {
+        browser::open_specific(&url, browser, None).unwrap();
+    } else {
+        browser::open(&url).unwrap();
+    }
+}
+
 fn main() {
     env_logger::init().unwrap();
 
@@ -64,12 +74,7 @@ fn main() {
     let server = server_builder.start();
 
     if !args.flag_no_browser {
-        let url = format!("http://localhost:{}", server.http_port());
-        if let Some(ref browser) = args.flag_browser {
-            browser::open_specific(&url, browser, None).unwrap();
-        } else {
-            browser::open(&url).unwrap();
-        }
+        open_browser(&server, args.flag_browser.clone());
     }
 
     let nvim_port = args.arg_nvim_port;
@@ -79,9 +84,17 @@ fn main() {
 
     let mut decoder = Decoder::new(BufReader::new(stream));
     loop {
-        let msg = <String as Decodable>::decode(&mut decoder);
+        let msg = <Vec<String> as Decodable>::decode(&mut decoder);
         match msg {
-            Ok(msg) => server.send_markdown(&msg),
+            Ok(msg) => {
+                let cmd = &msg.first().unwrap()[..];
+                let params = &msg[1..];
+                match cmd {
+                    "send_data" => server.send_markdown(&params[0]),
+                    "open_browser" => open_browser(&server, args.flag_browser.clone()),
+                    _ => panic!("Received unknown command: {}", cmd)
+                }
+            }
             Err(InvalidMarkerRead(UnexpectedEOF)) => {
                 // In this case, the remote client probably just hung up.
                 break

@@ -39,12 +39,22 @@ class MarkdownPlugin(object):
         if self.client is None:
             return
 
-        msg = msgpack.packb('\n'.join(self.vim.current.buffer))
+        msg = msgpack.packb(['send_data', '\n'.join(self.vim.current.buffer)])
+        self.client.send(msg)
+
+    def open_browser(self):
+        "Send the client a message indicating it should open a browser."
+        msg = msgpack.packb(['open_browser'])
         self.client.send(msg)
 
     def should_autostart(self):
         "Returns whether the server should start automatically."
         return self.vim.vars.get('markdown_composer_autostart', True)
+
+    @neovim.command('ComposerOpen')
+    def composer_open(self):
+        "(Re)opens the browser."
+        self.open_browser()
 
     @neovim.command('ComposerUpdate', sync=True)
     def send_current_buffer_command(self):
