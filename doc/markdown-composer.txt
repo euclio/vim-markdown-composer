@@ -42,10 +42,13 @@ However, some commands are provided should you like operate the plugin
 manually.
 
                                         *markdown-composer-:ComposerStart*
-:MarkdownComposerStart              Start the preview server.
+:ComposerStart              Start the preview server.
 
                                         *markdown-composer-:ComposerPreview*
-:MarkdownComposerPreview            Send the current buffer to the server.
+:ComposerPreview            Send the current buffer to the server.
+
+                                        *markdown-composer-:ComposerPort*
+:ComposerPort               Echoes the port that the plugin is listening on.
 
 ABOUT                                   *markdown-composer-about*
 

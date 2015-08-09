@@ -18,14 +18,17 @@ import msgpack
 
 @neovim.plugin
 class MarkdownPlugin(object):
+
     """
     Neovim remote plugin that communicates over a socket with a Rust client.
     """
+
     def __init__(self, vim):
         self.vim = vim
         self.server = None
         self.client = None
         self.client_process = None
+        self.listening_port = None
 
     def send_current_buffer(self):
         """
@@ -49,6 +52,11 @@ class MarkdownPlugin(object):
         "Start the client manually."
         self.start_client()
 
+    @neovim.command('ComposerPort')
+    def composer_port(self):
+        "Echoes the port that the plugin is listening on."
+        self.vim.command('echom "{}"'.format(self.listening_port))
+
     @neovim.autocmd('FileType', pattern='markdown', sync=True)
     def start_client(self):
         """
@@ -63,10 +71,11 @@ class MarkdownPlugin(object):
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind(('localhost', 0))
-        port = self.server.getsockname()[1]
+        self.listening_port = self.server.getsockname()[1]
         self.server.listen(1)
 
-        logging.info('starting markdown client on port %d', port)
+        logging.info(
+            'starting markdown client on port %d', self.listening_port)
 
         # Arguments for the client
         browser = self.vim.vars.get('markdown_composer_browser')
@@ -93,7 +102,7 @@ class MarkdownPlugin(object):
                 args.append('--highlight-theme=%s' % syntax_theme)
 
             self.client_process = subprocess.Popen(
-                args + [str(port), current_buffer],
+                args + [str(self.listening_port), current_buffer],
                 cwd=str(plugin_root),
                 stdout=subprocess.PIPE)
 
