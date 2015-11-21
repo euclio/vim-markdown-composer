@@ -72,6 +72,10 @@ class MarkdownPlugin(object):
         self.vim.command('echom "{}"'.format(self.listening_port))
 
     @neovim.autocmd('FileType', pattern='markdown', sync=True)
+    def auto_start_client(self):
+        if self.should_autostart():
+            self.start_client()
+
     def start_client(self):
         """
         Starts the Rust client, which handles most of the heavy lifting.
@@ -79,8 +83,7 @@ class MarkdownPlugin(object):
         The server will begin listening for TCP connections on an arbitrary
         socket. The server will handle only one connection at a time.
         """
-
-        if not self.should_autostart() or self.server is not None:
+        if self.server is not None:
             return
 
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
