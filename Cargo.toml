@@ -5,9 +5,10 @@ authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.1.2"
-docopt = "*"
+aurelius = "0.1.5"
+docopt = "0.6"
 env_logger = "0.3.1"
 log = "0.3.1"
-rmp = "0.4.0"
-rustc-serialize = "*"
+rmp = "0.7.3"
+rmp-serialize = "0.7.0"
+rustc-serialize = "0.3"

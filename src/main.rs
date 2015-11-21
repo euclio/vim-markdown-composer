@@ -10,6 +10,7 @@ extern crate aurelius;
 extern crate docopt;
 extern crate env_logger;
 extern crate rmp as msgpack;
+extern crate rmp_serialize;
 extern crate rustc_serialize;
 
 use std::io::BufReader;
@@ -18,9 +19,9 @@ use std::net::TcpStream;
 use aurelius::{Server, ServerHandle};
 use aurelius::browser;
 use docopt::Docopt;
-use msgpack::Decoder;
 use msgpack::decode::ReadError::UnexpectedEOF;
-use msgpack::decode::serialize::Error::InvalidMarkerRead;
+use rmp_serialize::Decoder;
+use rmp_serialize::decode::Error;
 use rustc_serialize::Decodable;
 
 static USAGE: &'static str = "
@@ -95,7 +96,7 @@ fn main() {
                     _ => panic!("Received unknown command: {}", cmd)
                 }
             }
-            Err(InvalidMarkerRead(UnexpectedEOF)) => {
+            Err(Error::InvalidMarkerRead(UnexpectedEOF)) => {
                 // In this case, the remote client probably just hung up.
                 break
             },
