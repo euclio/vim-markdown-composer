@@ -8,11 +8,12 @@
 #[macro_use] extern crate log;
 extern crate aurelius;
 extern crate docopt;
-extern crate env_logger;
+extern crate log4rs;
 extern crate rmp as msgpack;
 extern crate rmp_serialize;
 extern crate rustc_serialize;
 
+use std::default::Default;
 use std::io::BufReader;
 use std::net::TcpStream;
 
@@ -57,7 +58,7 @@ fn open_browser(server: &ServerHandle, browser: Option<String>) {
 }
 
 fn main() {
-    env_logger::init().unwrap();
+    log4rs::init_file("config/log.toml", Default::default()).unwrap();
 
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
