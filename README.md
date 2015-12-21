@@ -13,6 +13,11 @@ This plugin should be considered alpha-quality software.
 
 vim-markdown-composer requires [Python 3], [Rust], [cargo], and [Neovim].
 
+vim-markdown-composer officially targets the latest version of stable Rust.
+However, it should work in versions as early as 1.3. If you'd like to install
+multiple versions of Rust on the same machine, check out
+[multirust](https://github.com/brson/multirust).
+
 If you haven't already installed the Python 3 plugin host, install it with `pip3
 install neovim`.
 
