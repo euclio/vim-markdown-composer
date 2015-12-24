@@ -51,7 +51,9 @@ fn open_browser(server: &ServerHandle, browser: Option<String>) {
     let url = format!("http://localhost:{}", server.http_port());
 
     if let Some(ref browser) = browser {
-        browser::open_specific(&url, browser, None).unwrap();
+        let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
+        let (cmd, args) = split_cmd.split_first().unwrap();
+        browser::open_specific(&url, cmd, args).unwrap();
     } else {
         browser::open(&url).unwrap();
     }
