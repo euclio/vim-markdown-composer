@@ -5,7 +5,8 @@
 //! in a browser. As new messages are received on the input port, the markdown is asynchonously
 //! rendered in the browser (no refresh is required).
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate aurelius;
 extern crate docopt;
 extern crate log4rs;
@@ -25,6 +26,7 @@ use rmp_serialize::Decoder;
 use rmp_serialize::decode::Error;
 use rustc_serialize::Decodable;
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 static USAGE: &'static str = "
 Usage: markdown_composer [options] <nvim-port> [<initial-markdown>]
        markdown_composer --help
@@ -63,8 +65,8 @@ fn main() {
     log4rs::init_file("config/log.toml", Default::default()).unwrap();
 
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+                         .and_then(|d| d.decode())
+                         .unwrap_or_else(|e| e.exit());
 
     let mut server_builder = Server::new();
     if let Some(ref markdown) = args.arg_initial_markdown {
@@ -83,8 +85,8 @@ fn main() {
 
     let nvim_port = args.arg_nvim_port;
     let stream = TcpStream::connect(("localhost", nvim_port))
-                            .ok()
-                            .expect(&format!("no listener on port {}", nvim_port));
+                     .ok()
+                     .expect(&format!("no listener on port {}", nvim_port));
 
     let mut decoder = Decoder::new(BufReader::new(stream));
     loop {
@@ -96,14 +98,14 @@ fn main() {
                 match cmd {
                     "send_data" => server.send_markdown(&params[0]),
                     "open_browser" => open_browser(&server, args.flag_browser.clone()),
-                    _ => panic!("Received unknown command: {}", cmd)
+                    _ => panic!("Received unknown command: {}", cmd),
                 }
             }
             Err(Error::InvalidMarkerRead(UnexpectedEOF)) => {
                 // In this case, the remote client probably just hung up.
-                break
-            },
-            Err(err) => panic!(err)
+                break;
+            }
+            Err(err) => panic!(err),
         }
     }
 }
