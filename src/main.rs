@@ -15,10 +15,11 @@ extern crate rmp_serialize;
 extern crate rustc_serialize;
 
 use std::default::Default;
+use std::env;
 use std::io::BufReader;
 use std::net::TcpStream;
 
-use aurelius::{Server, ServerHandle};
+use aurelius::Server;
 use aurelius::browser;
 use docopt::Docopt;
 use msgpack::decode::ReadError::UnexpectedEOF;
@@ -49,8 +50,8 @@ struct Args {
     flag_highlight_theme: Option<String>,
 }
 
-fn open_browser(server: &ServerHandle, browser: Option<String>) {
-    let url = format!("http://localhost:{}", server.http_port());
+fn open_browser(server: &Server, browser: Option<String>) {
+    let url = format!("http://{}", server.http_addr().unwrap());
 
     if let Some(ref browser) = browser {
         let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
@@ -68,16 +69,12 @@ fn main() {
                          .and_then(|d| d.decode())
                          .unwrap_or_else(|e| e.exit());
 
-    let mut server_builder = Server::new();
-    if let Some(ref markdown) = args.arg_initial_markdown {
-        server_builder.initial_markdown(markdown);
-    }
-
-    if let Some(ref theme) = args.flag_highlight_theme {
-        server_builder.highlight_theme(theme);
-    }
-
-    let server = server_builder.start();
+    let mut server = Server::new_with_config(aurelius::Config {
+        initial_markdown: args.arg_initial_markdown.unwrap_or("".to_owned()),
+        highlight_theme: args.flag_highlight_theme.unwrap_or("github".to_owned()),
+        working_directory: env::current_dir().unwrap().to_owned(),
+    });
+    let sender = server.start();
 
     if !args.flag_no_browser {
         open_browser(&server, args.flag_browser.clone());
@@ -96,7 +93,7 @@ fn main() {
                 let cmd = &msg.first().unwrap()[..];
                 let params = &msg[1..];
                 match cmd {
-                    "send_data" => server.send_markdown(&params[0]),
+                    "send_data" => sender.send(params[0].to_owned()).unwrap(),
                     "open_browser" => open_browser(&server, args.flag_browser.clone()),
                     _ => panic!("Received unknown command: {}", cmd),
                 }
