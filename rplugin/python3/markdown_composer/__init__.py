@@ -6,6 +6,7 @@ This remote plugin serves to connect the Rust client to Neovim.
 This may be replaced in the future by a pure-Rust implementation.
 """
 
+import os
 from pathlib import Path
 import logging
 import socket
@@ -118,6 +119,8 @@ class MarkdownPlugin(object):
             if syntax_theme:
                 args.append('--highlight-theme=%s' % syntax_theme)
 
+            args.append('--working-directory=%s' % os.getcwd())
+
             self.client_process = subprocess.Popen(
                 args + [str(self.listening_port), current_buffer],
                 cwd=str(plugin_root),
@@ -127,6 +130,15 @@ class MarkdownPlugin(object):
                 self.client, _ = self.server.accept()
 
         threading.Thread(target=launch_client_process).start()
+
+    @neovim.autocmd('BufEnter', pattern='*.md,*.mkd,*.markdown')
+    def change_working_directory(self):
+        "Serve static files from the current buffer's working directory."
+        if self.client is None:
+            return
+
+        current_dir = os.path.dirname(self.vim.current.buffer.name)
+        msg = msgpack.packb(['chdir', current_dir])
 
     @neovim.autocmd('CursorHold,CursorHoldI,CursorMoved,CursorMovedI',
                     pattern='*.md,*.mkd,*.markdown')

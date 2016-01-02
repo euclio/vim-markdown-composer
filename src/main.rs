@@ -18,6 +18,7 @@ use std::default::Default;
 use std::env;
 use std::io::BufReader;
 use std::net::TcpStream;
+use std::path::PathBuf;
 
 use aurelius::Server;
 use aurelius::browser;
@@ -34,11 +35,18 @@ Usage: markdown_composer [options] <nvim-port> [<initial-markdown>]
 
 Options:
     -h, --help                  Show this message.
+
     --no-browser                Don't open the web browser automatically.
+
     --browser=<executable>      Specify a browser that the program should open. If not supplied,
                                 the program will determine the user's default browser.
+
     --highlight-theme=<theme>   The theme to use for syntax highlighting. All highlight.js themes
                                 are supported. If no theme is supplied, the 'github' theme is used.
+
+    --working-directory=<dir>   The directory that static files should be served out of. Useful for
+                                static content linked in the markdown. Can be changed at runtime
+                                with the 'chdir' command.
 ";
 
 #[derive(RustcDecodable, Debug)]
@@ -48,6 +56,7 @@ struct Args {
     flag_no_browser: bool,
     flag_browser: Option<String>,
     flag_highlight_theme: Option<String>,
+    flag_working_directory: Option<String>,
 }
 
 fn open_browser(server: &Server, browser: Option<String>) {
@@ -70,9 +79,9 @@ fn main() {
                          .unwrap_or_else(|e| e.exit());
 
     let mut server = Server::new_with_config(aurelius::Config {
-        initial_markdown: args.arg_initial_markdown.unwrap_or("".to_owned()),
+        initial_markdown: args.arg_initial_markdown.unwrap_or_default(),
         highlight_theme: args.flag_highlight_theme.unwrap_or("github".to_owned()),
-        working_directory: env::current_dir().unwrap().to_owned(),
+        working_directory: args.flag_working_directory.map_or(env::current_dir().unwrap().to_owned(), |path| PathBuf::from(path)),
     });
     let sender = server.start();
 
@@ -95,6 +104,7 @@ fn main() {
                 match cmd {
                     "send_data" => sender.send(params[0].to_owned()).unwrap(),
                     "open_browser" => open_browser(&server, args.flag_browser.clone()),
+                    "chdir" => server.change_working_directory(params[0].to_owned()),
                     _ => panic!("Received unknown command: {}", cmd),
                 }
             }
