@@ -81,6 +81,7 @@ fn main() {
     let mut server = Server::new_with_config(aurelius::Config {
         initial_markdown: args.arg_initial_markdown.unwrap_or_default(),
         highlight_theme: args.flag_highlight_theme.unwrap_or("github".to_owned()),
+        custom_css: "/vendor/github-markdown-css/github-markdown.css".to_owned(),
         working_directory: args.flag_working_directory.map_or(env::current_dir().unwrap().to_owned(), |path| PathBuf::from(path)),
     });
     let sender = server.start();

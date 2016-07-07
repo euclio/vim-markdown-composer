@@ -5,7 +5,7 @@ authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.1.5"
+aurelius = { git = "https://github.com/euclio/aurelius.git" }
 docopt = "0.6"
 log = "0.3.1"
 log4rs = "0.3.3"
