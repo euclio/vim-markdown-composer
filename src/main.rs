@@ -15,7 +15,6 @@ extern crate rmp_serialize;
 extern crate rustc_serialize;
 
 use std::default::Default;
-use std::env;
 use std::io::BufReader;
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -28,8 +27,7 @@ use rmp_serialize::Decoder;
 use rmp_serialize::decode::Error;
 use rustc_serialize::Decodable;
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
-static USAGE: &'static str = "
+static USAGE: &'static str = r"
 Usage: markdown_composer [options] <nvim-port> [<initial-markdown>]
        markdown_composer --help
 
@@ -47,6 +45,9 @@ Options:
     --working-directory=<dir>   The directory that static files should be served out of. Useful for
                                 static content linked in the markdown. Can be changed at runtime
                                 with the 'chdir' command.
+
+    --custom-css=<url/path>     CSS that should be used to style the markdown output. Defaults to
+                                github-like CSS.
 ";
 
 #[derive(RustcDecodable, Debug)]
@@ -57,6 +58,7 @@ struct Args {
     flag_browser: Option<String>,
     flag_highlight_theme: Option<String>,
     flag_working_directory: Option<String>,
+    flag_custom_css: Option<String>,
 }
 
 fn open_browser(server: &Server, browser: Option<String>) {
@@ -75,14 +77,28 @@ fn main() {
     log4rs::init_file("config/log.toml", Default::default()).unwrap();
 
     let args: Args = Docopt::new(USAGE)
-                         .and_then(|d| d.decode())
-                         .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
-    let mut server = Server::new_with_config(aurelius::Config {
-        initial_markdown: args.arg_initial_markdown.unwrap_or_default(),
-        highlight_theme: args.flag_highlight_theme.unwrap_or("github".to_owned()),
-        working_directory: args.flag_working_directory.map_or(env::current_dir().unwrap().to_owned(), |path| PathBuf::from(path)),
-    });
+    let mut config = aurelius::Config::default();
+
+    if let Some(markdown) = args.arg_initial_markdown {
+        config.initial_markdown = markdown;
+    }
+
+    if let Some(highlight_theme) = args.flag_highlight_theme {
+        config.highlight_theme = highlight_theme;
+    }
+
+    if let Some(working_directory) = args.flag_working_directory {
+        config.working_directory = PathBuf::from(working_directory);
+    }
+
+    if let Some(custom_css) = args.flag_custom_css {
+        config.custom_css = custom_css;
+    }
+
+    let mut server = Server::new_with_config(config);
     let sender = server.start();
 
     if !args.flag_no_browser {
@@ -91,8 +107,8 @@ fn main() {
 
     let nvim_port = args.arg_nvim_port;
     let stream = TcpStream::connect(("localhost", nvim_port))
-                     .ok()
-                     .expect(&format!("no listener on port {}", nvim_port));
+        .ok()
+        .expect(&format!("no listener on port {}", nvim_port));
 
     let mut decoder = Decoder::new(BufReader::new(stream));
     loop {
