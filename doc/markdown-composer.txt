@@ -50,8 +50,8 @@ manually.
                                         *markdown-composer-:ComposerStart*
 :ComposerStart              Start the preview server.
 
-                                        *markdown-composer-:ComposerPreview*
-:ComposerPreview            Send the current buffer to the preview server.
+                                        *markdown-composer-:ComposerUpdate*
+:ComposerUpdate             Send the current buffer to the preview server.
 
 :ComposerOpen                           *markdown-composer-:ComposerOpen*
                             Opens a new browser window containing the
