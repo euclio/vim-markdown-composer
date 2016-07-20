@@ -74,7 +74,7 @@ fn open_browser(server: &Server, browser: Option<String>) {
 }
 
 fn main() {
-    log4rs::init_file("config/log.toml", Default::default()).unwrap();
+    log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())

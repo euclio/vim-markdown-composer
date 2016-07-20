@@ -8,7 +8,7 @@ description = "A complete solution for previewing markdown."
 aurelius = "0.1.5"
 docopt = "0.6"
 log = "0.3.1"
-log4rs = { version = "0.4.8", features = [ "toml" ] }
+log4rs = { version = "0.4.8", features = [ "yaml" ] }
 rmp = "0.7.3"
 rmp-serialize = "0.7.0"
 rustc-serialize = "0.3"
