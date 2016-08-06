@@ -15,8 +15,11 @@ extern crate rmp_serialize;
 extern crate rustc_serialize;
 
 use std::default::Default;
-use std::io::BufReader;
-use std::net::TcpStream;
+use std::error::Error;
+use std::fs::File;
+use std::io::{self, BufReader};
+use std::io::prelude::*;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use aurelius::Server;
@@ -24,12 +27,23 @@ use aurelius::browser;
 use docopt::Docopt;
 use msgpack::decode::ReadError::UnexpectedEOF;
 use rmp_serialize::Decoder;
-use rmp_serialize::decode::Error;
+use rmp_serialize::decode;
 use rustc_serialize::Decodable;
 
 static USAGE: &'static str = r"
-Usage: markdown_composer [options] <nvim-port> [<initial-markdown>]
-       markdown_composer --help
+Usage: markdown_composer [options] [<markdown-file>]
+
+Creates a static server for serving markdown previews. Reads msgpack-rpc requests from stdin.
+
+Supported procedures:
+
+    send_data(data: String)     Pushes a markdown string to the rendering server.
+    open_browser()              Opens the user default browser, or the browser specified by
+                                `--browser`.
+    chdir(path: String)         Changes the directory that the server serves static files from.
+
+You may provide an optional file argument. The contents of this file will be rendered and displayed
+by the server on startup.
 
 Options:
     -h, --help                  Show this message.
@@ -52,8 +66,7 @@ Options:
 
 #[derive(RustcDecodable, Debug)]
 struct Args {
-    arg_nvim_port: u16,
-    arg_initial_markdown: Option<String>,
+    arg_markdown_file: Option<String>,
     flag_no_browser: bool,
     flag_browser: Option<String>,
     flag_highlight_theme: Option<String>,
@@ -61,8 +74,8 @@ struct Args {
     flag_custom_css: Option<String>,
 }
 
-fn open_browser(server: &Server, browser: Option<String>) {
-    let url = format!("http://{}", server.http_addr().unwrap());
+fn open_browser(http_addr: &SocketAddr, browser: Option<String>) {
+    let url = format!("http://{}", http_addr);
 
     if let Some(ref browser) = browser {
         let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
@@ -82,8 +95,10 @@ fn main() {
 
     let mut config = aurelius::Config::default();
 
-    if let Some(markdown) = args.arg_initial_markdown {
-        config.initial_markdown = markdown;
+    if let Some(markdown_file) = args.arg_markdown_file {
+        debug!("Reading initial markdown file: {:?}", markdown_file);
+        let mut file = File::open(markdown_file).unwrap();
+        file.read_to_string(&mut config.initial_markdown).unwrap();
     }
 
     if let Some(highlight_theme) = args.flag_highlight_theme {
@@ -99,36 +114,35 @@ fn main() {
     }
 
     let mut server = Server::new_with_config(config);
-    let sender = server.start();
+    let mut handle = server.start();
 
     if !args.flag_no_browser {
-        open_browser(&server, args.flag_browser.clone());
+        open_browser(&handle.http_addr().unwrap(), args.flag_browser.clone());
     }
 
-    let nvim_port = args.arg_nvim_port;
-    let stream = TcpStream::connect(("localhost", nvim_port))
-        .ok()
-        .expect(&format!("no listener on port {}", nvim_port));
-
-    let mut decoder = Decoder::new(BufReader::new(stream));
+    let mut decoder = Decoder::new(BufReader::new(io::stdin()));
     loop {
         let msg = <Vec<String> as Decodable>::decode(&mut decoder);
+
         match msg {
             Ok(msg) => {
                 let cmd = &msg.first().unwrap()[..];
                 let params = &msg[1..];
+                debug!("{:?}", cmd);
                 match cmd {
-                    "send_data" => sender.send(params[0].to_owned()).unwrap(),
-                    "open_browser" => open_browser(&server, args.flag_browser.clone()),
-                    "chdir" => server.change_working_directory(params[0].to_owned()),
+                    "send_data" => handle.send(params[0].to_owned()),
+                    "open_browser" => {
+                        open_browser(&handle.http_addr().unwrap(), args.flag_browser.clone())
+                    }
+                    "chdir" => handle.change_working_directory(params[0].to_owned()),
                     _ => panic!("Received unknown command: {}", cmd),
                 }
             }
-            Err(Error::InvalidMarkerRead(UnexpectedEOF)) => {
+            Err(decode::Error::InvalidMarkerRead(UnexpectedEOF)) => {
                 // In this case, the remote client probably just hung up.
                 break;
             }
-            Err(err) => panic!(err),
+            Err(err) => panic!("{}", err.description()),
         }
     }
 }
