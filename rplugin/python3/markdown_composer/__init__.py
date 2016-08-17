@@ -105,7 +105,8 @@ class MarkdownPlugin(object):
 
         args.append('--working-directory=%s' % os.getcwd())
 
-        args.append(self.vim.current.buffer.name)
+        if os.path.isfile(self.vim.current.buffer.name):
+            args.append(self.vim.current.buffer.name)
 
         self.client = subprocess.Popen(args,
             bufsize=0,
