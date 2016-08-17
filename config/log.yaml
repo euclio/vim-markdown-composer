@@ -10,6 +10,6 @@ appenders:
       pattern: "{d} [{l}] {M}:{m}{n}"
 
 root:
-  level: warn
+  level: error
   appenders:
     - file
