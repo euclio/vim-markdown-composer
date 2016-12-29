@@ -8,7 +8,7 @@ description = "A complete solution for previewing markdown."
 aurelius = "0.1.13"
 clap = "2"
 log = "0.3.1"
-log4rs = { version = "0.4.8", features = [ "yaml" ] }
+log4rs = "0.5"
 rmp = "0.7"
 rmp-serde = "0.10"
 serde = "0.8"
