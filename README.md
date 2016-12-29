@@ -15,7 +15,7 @@ vim-markdown-composer requires [Rust], [cargo], and [Neovim].
 
 vim-markdown-composer officially targets the latest version of [stable Rust]. If
 you'd like to install multiple versions of Rust on the same machine, check out
-[multirust](https://github.com/brson/multirust).
+[rustup.rs](https://www.rustup.rs/).
 
 Unfortunately, since Neovim only supports Unixes, the plugin will only work on
 OS X and Linux at this time. However, Windows support should come for free once
