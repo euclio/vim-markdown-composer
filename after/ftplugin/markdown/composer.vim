@@ -18,7 +18,7 @@ function! s:startServer()
 
   if exists('g:markdown_composer_open_browser')
     if !g:markdown_composer_open_browser
-      call add(args, '--no-browser')
+      call add(args, '--no-auto-open')
     endif
   endif
 
