@@ -5,8 +5,6 @@
 vim-markdown-composer is a plugin that adds asynchronous markdown preview to
 Neovim.
 
-This plugin should be considered alpha-quality software.
-
 ![](http://i.imgur.com/TVJ0wCn.gif)
 
 ## Requirements
