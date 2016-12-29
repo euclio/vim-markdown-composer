@@ -7,12 +7,14 @@
 
 #[macro_use]
 extern crate log;
+
 extern crate aurelius;
 extern crate docopt;
 extern crate log4rs;
 extern crate rmp as msgpack;
-extern crate rmp_serialize;
+extern crate rmp_serde;
 extern crate rustc_serialize;
+extern crate serde;
 
 use std::default::Default;
 use std::error::Error;
@@ -26,9 +28,8 @@ use aurelius::Server;
 use aurelius::browser;
 use docopt::Docopt;
 use msgpack::decode::ReadError::UnexpectedEOF;
-use rmp_serialize::Decoder;
-use rmp_serialize::decode;
-use rustc_serialize::Decodable;
+use rmp_serde::{Deserializer, decode};
+use serde::Deserialize;
 
 static USAGE: &'static str = r"
 Usage: markdown_composer [options] [<markdown-file>]
@@ -120,21 +121,28 @@ fn main() {
         open_browser(&handle.http_addr().unwrap(), args.flag_browser.clone());
     }
 
-    let mut decoder = Decoder::new(BufReader::new(io::stdin()));
+    let mut decoder = Deserializer::new(BufReader::new(io::stdin()));
     loop {
-        let msg = <Vec<String> as Decodable>::decode(&mut decoder);
+        let msg =
+            <rmp_serde::Value as Deserialize>::deserialize(&mut decoder);
 
         match msg {
             Ok(msg) => {
-                let cmd = &msg.first().unwrap()[..];
-                let params = &msg[1..];
-                debug!("{:?}", cmd);
+                let msg = msg.0;
+
+                // Assume we received a notification.
+                assert_eq!(msg[0].as_u64().unwrap(), 2);
+                let cmd = msg[1].as_str().unwrap();
+                let params = msg[2].as_array().unwrap();
+
                 match cmd {
-                    "send_data" => handle.send(params[0].to_owned()),
+                    "send_data" => handle.send(params[0].as_str().unwrap().to_owned()),
                     "open_browser" => {
                         open_browser(&handle.http_addr().unwrap(), args.flag_browser.clone())
                     }
-                    "chdir" => handle.change_working_directory(params[0].to_owned()),
+                    "chdir" => {
+                        handle.change_working_directory(params[0].as_str().unwrap().to_owned())
+                    }
                     _ => panic!("Received unknown command: {}", cmd),
                 }
             }

@@ -11,22 +11,15 @@ This plugin should be considered alpha-quality software.
 
 ## Requirements
 
-vim-markdown-composer requires [Python 3], [Rust], [cargo], and [Neovim].
+vim-markdown-composer requires [Rust], [cargo], and [Neovim].
 
 vim-markdown-composer officially targets the latest version of [stable Rust]. If
 you'd like to install multiple versions of Rust on the same machine, check out
 [multirust](https://github.com/brson/multirust).
 
-If you haven't already installed the Python 3 plugin host, install it with `pip3
-install neovim`.
-
 Unfortunately, since Neovim only supports Unixes, the plugin will only work on
 OS X and Linux at this time. However, Windows support should come for free once
 Neovim supports it.
-
-The Python 3 dependency may be dropped once Rust has a usable [msgpack-rpc]
-library or Neovim has a Rust [plugin host][Neovim remote plugin]. Similarly, the
-plugin may gain support for vim in the future.
 
 ## Installation
 
@@ -39,7 +32,6 @@ Here's an an example of managing installation with vim-plug:
 function! BuildComposer(info)
   if a:info.status != 'unchanged' || a:info.force
     !cargo build --release
-    UpdateRemotePlugins
   endif
 endfunction
 
@@ -48,8 +40,6 @@ Plug 'euclio/vim-markdown-composer', { 'do': function('BuildComposer') }
 
 You should run `cargo build --release` in the plugin directory after
 installation.
-
-Also, don't forget to `:UpdateRemotePlugins` after installing or updating!
 
 If you use the above snippet, everything should be taken care of automatically.
 
@@ -64,7 +54,6 @@ This plugin is inspired by suan's [vim-instant-markdown].
 This plugin was built with [aurelius], a Rust library for live-updating markdown
 previews.
 
-[Python 3]: https://www.python.org/downloads/
 [Rust]: http://www.rust-lang.org/
 [cargo]: https://crates.io/
 [Neovim]: http://neovim.io/

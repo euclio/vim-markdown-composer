@@ -57,8 +57,8 @@ manually.
                             Opens a new browser window containing the
                             markdown preview.
 
-                                        *markdown-composer-:ComposerPort*
-:ComposerPort               Echoes the port that the plugin is listening on.
+                                        *markdown-composer-:ComposerJob*
+:ComposerJob               Echoes the channel that the plugin is listening on.
 
 ABOUT                                   *markdown-composer-about*
 
