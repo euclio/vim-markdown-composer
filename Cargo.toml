@@ -5,10 +5,10 @@ authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.1.13"
+aurelius = "0.2"
 clap = "2"
 log = "0.3.1"
-log4rs = "0.5"
-rmp = "0.7"
-rmp-serde = "0.10"
-serde = "0.8"
+log4rs = "0.6"
+rmpv = { version = "0.3", features = ["with-serde"] }
+rmp-serde = "0.12"
+serde = "0.9"

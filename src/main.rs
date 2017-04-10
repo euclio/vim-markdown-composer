@@ -13,7 +13,7 @@ extern crate log;
 
 extern crate aurelius;
 extern crate log4rs;
-extern crate rmp as msgpack;
+extern crate rmpv as msgpack;
 extern crate rmp_serde;
 extern crate serde;
 
@@ -28,7 +28,7 @@ use std::path::PathBuf;
 use aurelius::Server;
 use aurelius::browser;
 use clap::{App, Arg};
-use msgpack::decode::ReadError::UnexpectedEOF;
+use msgpack::Value;
 use rmp_serde::{Deserializer, decode};
 use serde::Deserialize;
 
@@ -116,20 +116,17 @@ fn main() {
     let mut handle = server.start();
 
     if !matches.is_present("no-auto-open") {
-        open_browser(&handle.http_addr().unwrap(),
-                     matches.value_of("browser")
-                         .map(|s| s.to_owned()));
+        let browser = matches.value_of("browser").map(|s| s.to_owned());
+        debug!("opening {} with {:?}", handle.http_addr().unwrap(), &browser);
+        open_browser(&handle.http_addr().unwrap(), browser);
     }
 
     let mut decoder = Deserializer::new(BufReader::new(io::stdin()));
     loop {
-        let msg =
-            <rmp_serde::Value as Deserialize>::deserialize(&mut decoder);
+        let msg = Value::deserialize(&mut decoder);
 
         match msg {
             Ok(msg) => {
-                let msg = msg.0;
-
                 // Assume we received a notification.
                 assert_eq!(msg[0].as_u64().unwrap(), 2);
                 let cmd = msg[1].as_str().unwrap();
@@ -147,7 +144,7 @@ fn main() {
                     _ => panic!("Received unknown command: {}", cmd),
                 }
             }
-            Err(decode::Error::InvalidMarkerRead(UnexpectedEOF)) => {
+            Err(decode::Error::InvalidMarkerRead(_)) => {
                 // In this case, the remote client probably just hung up.
                 break;
             }
