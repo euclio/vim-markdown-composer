@@ -11,24 +11,27 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate serde_derive;
+
 extern crate aurelius;
 extern crate log4rs;
-extern crate rmpv as msgpack;
 extern crate rmp_serde;
+extern crate rmpv as msgpack;
 extern crate serde;
 
 use std::default::Default;
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, BufReader};
 use std::io::prelude::*;
+use std::io::{self, BufReader};
+use std::mem;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use aurelius::Server;
 use aurelius::browser;
 use clap::{App, Arg};
-use msgpack::Value;
 use rmp_serde::{Deserializer, decode};
 use serde::Deserialize;
 
@@ -42,6 +45,20 @@ Supported procedures:
                                 `--browser`.
     chdir(path: String)         Changes the directory that the server serves static files from.
 ";
+
+/// Represents an RPC request.
+///
+/// Assumes that the request's parameters are always `String`s.
+#[derive(Debug, Deserialize)]
+pub struct Rpc {
+    /// This field will be an ID for a msgpack request, or an ID for a JSON-RPC request.
+    ///
+    /// We include it because we know that it will be sent over the wire, but it's not actually
+    /// required for anything, so we keep it private.
+    _id_or_type: u64,
+    pub method: String,
+    pub params: Vec<String>,
+}
 
 fn open_browser(http_addr: &SocketAddr, browser: Option<String>) {
     let url = format!("http://{}", http_addr);
@@ -123,32 +140,29 @@ fn main() {
 
     let mut decoder = Deserializer::new(BufReader::new(io::stdin()));
     loop {
-        let msg = Value::deserialize(&mut decoder);
-
-        match msg {
-            Ok(msg) => {
-                // Assume we received a notification.
-                assert_eq!(msg[0].as_u64().unwrap(), 2);
-                let cmd = msg[1].as_str().unwrap();
-                let params = msg[2].as_array().unwrap();
-
-                match cmd {
-                    "send_data" => handle.send(params[0].as_str().unwrap().to_owned()),
-                    "open_browser" => {
-                        open_browser(&handle.http_addr().unwrap(),
-                                     matches.value_of("browser").map(|s| s.to_owned()))
-                    }
-                    "chdir" => {
-                        handle.change_working_directory(params[0].as_str().unwrap().to_owned())
-                    }
-                    _ => panic!("Received unknown command: {}", cmd),
-                }
-            }
+        let mut rpc = match Rpc::deserialize(&mut decoder) {
+            Ok(rpc) => rpc,
             Err(decode::Error::InvalidMarkerRead(_)) => {
                 // In this case, the remote client probably just hung up.
                 break;
             }
             Err(err) => panic!("{}", err.description()),
+        };
+
+        match &rpc.method[..] {
+            "send_data" => {
+                // Avoid copy
+                let data = mem::replace(&mut rpc.params[0], String::default());
+                handle.send(data);
+            },
+            "open_browser" => {
+                let browser = matches.value_of("browser").map(|s| s.to_owned());
+                open_browser(&handle.http_addr().unwrap(), browser);
+            },
+            "chdir" => {
+                handle.change_working_directory(rpc.params[0].clone());
+            },
+            method => panic!("Received unknown command: {}", method),
         }
     }
 }

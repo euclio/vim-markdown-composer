@@ -9,6 +9,7 @@ aurelius = "0.2"
 clap = "2"
 log = "0.3.1"
 log4rs = "0.6"
-rmpv = { version = "0.3", features = ["with-serde"] }
 rmp-serde = "0.12"
+rmpv = { version = "0.3", features = ["with-serde"] }
 serde = "0.9"
+serde_derive = "0.9"
