@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/euclio/vim-markdown-composer.svg)](https://travis-ci.org/euclio/vim-markdown-composer)
 
 vim-markdown-composer is a plugin that adds asynchronous markdown preview to
-Neovim.
+Neovim and vim.
 
 ![](http://i.imgur.com/TVJ0wCn.gif)
 
@@ -12,12 +12,10 @@ Neovim.
 vim-markdown-composer requires [Rust], [cargo], and [Neovim].
 
 vim-markdown-composer officially targets the latest version of [stable Rust]. If
-you'd like to install multiple versions of Rust on the same machine, check out
+you'd like to easily install the lastest version of Rust, check out
 [rustup.rs](https://www.rustup.rs/).
 
-Unfortunately, since Neovim only supports Unixes, the plugin will only work on
-OS X and Linux at this time. However, Windows support should come for free once
-Neovim supports it.
+This plugin supports Windows, OS X, and Linux.
 
 ## Installation
 
@@ -30,6 +28,9 @@ Here's an an example of managing installation with vim-plug:
 function! BuildComposer(info)
   if a:info.status != 'unchanged' || a:info.force
     !cargo build --release
+
+    " Or, if using vim
+    " !cargo build --release --no-default-features --features json-rpc
   endif
 endfunction
 
@@ -37,7 +38,7 @@ Plug 'euclio/vim-markdown-composer', { 'do': function('BuildComposer') }
 ```
 
 You should run `cargo build --release` in the plugin directory after
-installation.
+installation. Vim support requires the `json-rpc` cargo feature.
 
 If you use the above snippet, everything should be taken care of automatically.
 

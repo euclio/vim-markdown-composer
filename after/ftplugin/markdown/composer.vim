@@ -5,45 +5,79 @@ function! s:startServer()
     return
   endif
 
-  let args = ['cargo', 'run', '--release', '--']
-
-  let s:file = expand('%:p')
-  if filereadable(s:file)
-    call add(args, s:file)
+  let l:args = ['cargo', 'run', '--release',
+             \ '--manifest-path', s:plugin_root . '/Cargo.toml']
+  if !has('nvim')
+    call extend(l:args, ['--no-default-features', '--features', 'json-rpc'])
   endif
 
+  call extend(l:args, ['--'])
+
   if exists('g:markdown_composer_browser')
-    call extend(args, ['--browser', g:markdown_composer_browser])
+    call extend(l:args, ['--browser', g:markdown_composer_browser])
   endif
 
   if exists('g:markdown_composer_open_browser')
     if !g:markdown_composer_open_browser
-      call add(args, '--no-auto-open')
+      call add(l:args, '--no-auto-open')
     endif
   endif
 
   if exists('g:markdown_composer_syntax_theme')
-    call extend(args, ['--highlight-theme', g:markdown_composer_syntax_theme])
+    call extend(l:args, ['--highlight-theme', g:markdown_composer_syntax_theme])
   endif
 
-  call extend(args, ['--working-directory', getcwd()])
+  call extend(l:args, ['--working-directory', getcwd()])
 
-  let s:job = jobstart(args, {
-        \ 'rpc': v:true,
-        \ 'cwd': s:plugin_root
-        \ }
-  \ )
+  let s:file = expand('%:p')
+  if filereadable(s:file)
+    call add(l:args, s:file)
+  endif
+
+  if has('nvim')
+    let s:job = jobstart(l:args, {
+          \ 'rpc': v:true,
+          \ })
+  else
+    call job_start(l:args, {
+          \ 'mode': 'nl',
+          \ 'out_cb': function('s:startupCallback'),
+          \ 'err_io': 'null',
+          \ })
+  endif
+endfunction
+
+function! s:startupCallback(channel, message) abort
+  let l:addr = 'localhost:' . a:message
+  let s:job = ch_open(l:addr, {
+       \ 'mode': 'json',
+       \ })
 endfunction
 
 function! s:sendBuffer()
   if exists('s:job')
-    call rpcnotify(s:job, 'send_data', join(getline(1, '$'), "\n"))
+    let l:data = join(getline(1, '$'), "\n")
+    if has('nvim')
+      call rpcnotify(s:job, 'send_data', l:data)
+    else
+        call ch_sendexpr(s:job, {
+              \ 'method': 'send_data',
+              \ 'params': [l:data],
+              \ })
+    endif
   endif
 endfunction
 
 function! s:openBrowser()
   if exists('s:job')
-    call rpcnotify(s:job, 'open_browser')
+    if has('nvim')
+      call rpcnotify(s:job, 'open_browser')
+    else
+      call ch_sendexpr(s:job, {
+            \ 'method': 'open_browser',
+            \ 'params': [],
+            \ })
+    endif
   endif
 endfunction
 
@@ -57,7 +91,14 @@ endfunction
 
 function! s:chdir()
   if exists('s:job')
-    call rpcnotify(s:job, 'chdir', getcwd())
+    if has('nvim')
+      call rpcnotify(s:job, 'chdir', getcwd())
+    else
+      call ch_sendexpr(s:job, {
+            \ 'method': 'open_browser',
+            \ 'params': [getcwd()],
+            \ })
+    endif
   endif
 endfunction
 

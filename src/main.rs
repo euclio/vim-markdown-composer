@@ -1,8 +1,7 @@
-//! A simple client that listens for msgpack-serialized strings on a port and renders them as
-//! markdown.
+//! A simple client that listens for RPC requests and renders them as markdown.
 //!
 //! The markdown is rendered on an arbitrary port on localhost, which is then automatically opened
-//! in a browser. As new messages are received on the input port, the markdown is asynchonously
+//! in a browser. As new messages are received through stdin, the markdown is asynchronously
 //! rendered in the browser (no refresh is required).
 
 #[macro_use]
@@ -16,27 +15,30 @@ extern crate serde_derive;
 
 extern crate aurelius;
 extern crate log4rs;
-extern crate rmp_serde;
-extern crate rmpv as msgpack;
+extern crate log_panics;
 extern crate serde;
 
+#[cfg(feature = "msgpack")]
+extern crate rmp_serde as rmps;
+
+#[cfg(feature = "json-rpc")]
+extern crate serde_json;
+
 use std::default::Default;
-use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{self, BufReader};
+use std::io;
 use std::mem;
 use std::net::SocketAddr;
+use std::net::TcpListener;
 use std::path::PathBuf;
 
-use aurelius::Server;
-use aurelius::browser;
+use aurelius::{browser, Handle, Server};
 use clap::{App, Arg};
-use rmp_serde::{Deserializer, decode};
 use serde::Deserialize;
 
 static ABOUT: &'static str = r"
-Creates a static server for serving markdown previews. Reads msgpack-rpc requests from stdin.
+Creates a static server for serving markdown previews. Reads RPC requests from stdin.
 
 Supported procedures:
 
@@ -49,21 +51,44 @@ Supported procedures:
 /// Represents an RPC request.
 ///
 /// Assumes that the request's parameters are always `String`s.
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "msgpack", derive(Deserialize))]
 pub struct Rpc {
-    /// This field will be an ID for a msgpack request, or an ID for a JSON-RPC request.
-    ///
-    /// We include it because we know that it will be sent over the wire, but it's not actually
-    /// required for anything, so we keep it private.
-    _id_or_type: u64,
+    /// The type of msgpack request. Should always be notification.
+    #[cfg(feature = "msgpack")]
+    msg_type: u64,
+
+    /// The ID of the JSON rpc request.
+    #[cfg(feature = "json-rpc")]
+    id: u64,
+
     pub method: String,
     pub params: Vec<String>,
 }
 
-fn open_browser(http_addr: &SocketAddr, browser: Option<String>) {
+#[cfg(feature = "json-rpc")]
+impl Deserialize for Rpc {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer {
+        #[derive(Deserialize)]
+        struct InnerRpc {
+            method: String,
+            params: Vec<String>,
+        }
+
+        let (id, rpc): (u64, InnerRpc) = Deserialize::deserialize(deserializer)?;
+
+        Ok(Rpc {
+            id: id,
+            method: rpc.method,
+            params: rpc.params,
+        })
+    }
+}
+
+fn open_browser(http_addr: &SocketAddr, browser: &Option<String>) {
     let url = format!("http://{}", http_addr);
 
-    if let Some(ref browser) = browser {
+    if let &Some(ref browser) = browser {
         let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
         let (cmd, args) = split_cmd.split_first().unwrap();
         browser::open_specific(&url, cmd, args).unwrap();
@@ -72,7 +97,54 @@ fn open_browser(http_addr: &SocketAddr, browser: Option<String>) {
     }
 }
 
+/// Slight hack to allow returning different `Deserializer`s.
+///
+/// The msgpack `Deserializer` type isn't actually nameable, because `new()` returns a type with a
+/// private type in the name. So, we just use a macro to keep the creation inline, letting
+/// type-inference do the work.
+#[cfg(feature = "msgpack")]
+macro_rules! create_deserializer {
+    ($reader:expr) => { rmps::Deserializer::new(std::io::BufReader::new($reader)) }
+}
+
+#[cfg(feature = "json-rpc")]
+macro_rules! create_deserializer {
+    ($reader:expr) => { serde_json::Deserializer::new(serde_json::de::IoRead::new($reader)) }
+}
+
+fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Handle) where R: Read {
+    let mut deserializer = create_deserializer!(reader);
+
+    loop {
+        let mut rpc = match Rpc::deserialize(&mut deserializer) {
+            Ok(rpc) => rpc,
+            #[cfg(feature = "msgpack")]
+            Err(rmps::decode::Error::InvalidMarkerRead(_)) => {
+                // In this case, the remote client probably just hung up.
+                break;
+            }
+            Err(err) => panic!("{}", err),
+        };
+
+        match &rpc.method[..] {
+            "send_data" => {
+                // Avoid copy
+                let data = mem::replace(&mut rpc.params[0], String::default());
+                handle.send(data);
+            },
+            "open_browser" => {
+                open_browser(&handle.http_addr().unwrap(), &browser);
+            },
+            "chdir" => {
+                handle.change_working_directory(rpc.params[0].clone());
+            },
+            method => panic!("Received unknown command: {}", method),
+        }
+    }
+}
+
 fn main() {
+    log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
     let matches = App::new("markdown_composer")
@@ -135,34 +207,30 @@ fn main() {
     if !matches.is_present("no-auto-open") {
         let browser = matches.value_of("browser").map(|s| s.to_owned());
         debug!("opening {} with {:?}", handle.http_addr().unwrap(), &browser);
-        open_browser(&handle.http_addr().unwrap(), browser);
+        open_browser(&handle.http_addr().unwrap(), &browser);
     }
 
-    let mut decoder = Deserializer::new(BufReader::new(io::stdin()));
-    loop {
-        let mut rpc = match Rpc::deserialize(&mut decoder) {
-            Ok(rpc) => rpc,
-            Err(decode::Error::InvalidMarkerRead(_)) => {
-                // In this case, the remote client probably just hung up.
-                break;
+    let browser = matches.value_of("browser").map(|s| s.to_string());
+
+    if cfg!(feature = "json-rpc") {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        info!("listening on {}", listener.local_addr().unwrap());
+
+        // Send port to vim
+        println!("{}", listener.local_addr().unwrap().port());
+
+        for stream in listener.incoming() {
+            match stream {
+                Ok(stream) => {
+                    info!("got connection on {}", stream.local_addr().unwrap());
+                    read_rpc(stream, &browser, &mut handle);
+                }
+                Err(e) => {
+                    panic!("problem reading stream: {}", e);
+                },
             }
-            Err(err) => panic!("{}", err.description()),
-        };
-
-        match &rpc.method[..] {
-            "send_data" => {
-                // Avoid copy
-                let data = mem::replace(&mut rpc.params[0], String::default());
-                handle.send(data);
-            },
-            "open_browser" => {
-                let browser = matches.value_of("browser").map(|s| s.to_owned());
-                open_browser(&handle.http_addr().unwrap(), browser);
-            },
-            "chdir" => {
-                handle.change_working_directory(rpc.params[0].clone());
-            },
-            method => panic!("Received unknown command: {}", method),
         }
-    }
+    } else {
+        read_rpc(io::stdin(), &browser, &mut handle);
+    };
 }

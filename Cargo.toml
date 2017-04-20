@@ -9,7 +9,14 @@ aurelius = "0.2"
 clap = "2"
 log = "0.3.1"
 log4rs = "0.6"
-rmp-serde = "0.12"
-rmpv = { version = "0.3", features = ["with-serde"] }
+log-panics = "1"
 serde = "0.9"
 serde_derive = "0.9"
+
+serde_json = { version = "0.9", optional = true }
+rmp-serde = { version = "0.12", optional = true }
+
+[features]
+default = ["msgpack"]
+msgpack = ["rmp-serde"]
+json-rpc = ["serde_json"]
