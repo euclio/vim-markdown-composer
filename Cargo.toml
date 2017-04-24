@@ -1,6 +1,6 @@
 [package]
 name = "markdown-composer"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 

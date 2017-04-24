@@ -1,6 +1,6 @@
 [root]
 name = "markdown-composer"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "aurelius 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.23.2 (registry+https://github.com/rust-lang/crates.io-index)",
