@@ -3,19 +3,19 @@
 [![Build Status](https://travis-ci.org/euclio/vim-markdown-composer.svg)](https://travis-ci.org/euclio/vim-markdown-composer)
 
 vim-markdown-composer is a plugin that adds asynchronous markdown preview to
-Neovim and vim.
+[Neovim] and [vim].
 
 ![](http://i.imgur.com/TVJ0wCn.gif)
 
 ## Requirements
 
-vim-markdown-composer requires [Rust], [cargo], and [Neovim].
+This plugin supports Windows, macOS, and Linux.
 
-vim-markdown-composer officially targets the latest version of [stable Rust]. If
-you'd like to easily install the lastest version of Rust, check out
-[rustup.rs](https://www.rustup.rs/).
+In addition to vim or Neovim, vim-markdown-composer requires a distribution of
+[Rust] with `cargo`. To easily install the lastest version of Rust with `cargo`,
+check out [rustup.rs](https://www.rustup.rs/).
 
-This plugin supports Windows, OS X, and Linux.
+vim-markdown-composer officially targets the latest version of [stable Rust].
 
 ## Installation
 
@@ -56,6 +56,7 @@ previews.
 [Rust]: http://www.rust-lang.org/
 [cargo]: https://crates.io/
 [Neovim]: http://neovim.io/
+[vim]: http://www.vim.org
 [vim-instant-markdown]: https://github.com/suan/vim-instant-markdown
 [Neovim remote plugin]: http://neovim.io/doc/user/remote_plugin.html
 [vim-plug]: https://github.com/junegunn/vim-plug
