@@ -5,8 +5,7 @@ function! s:startServer()
     return
   endif
 
-  let l:args = ['cargo', 'run', '--release',
-             \ '--manifest-path', s:plugin_root . '/Cargo.toml']
+  let l:args = ['cargo', 'run', '--release']
   if !has('nvim')
     call extend(l:args, ['--no-default-features', '--features', 'json-rpc'])
   endif
@@ -36,14 +35,20 @@ function! s:startServer()
 
   if has('nvim')
     let s:job = jobstart(l:args, {
+          \ 'cwd': s:plugin_root,
           \ 'rpc': v:true,
           \ })
   else
+    " vim doesn't have a way to set the working directory for a job, so we have
+    " to change the directory manually. See vim#1024.
+    let l:original_cwd = getcwd()
+    execute 'lcd' s:plugin_root
     call job_start(l:args, {
           \ 'mode': 'nl',
           \ 'out_cb': function('s:startupCallback'),
           \ 'err_io': 'null',
           \ })
+    execute 'lcd' l:original_cwd
   endif
 endfunction
 
