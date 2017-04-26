@@ -27,10 +27,11 @@ Here's an an example of managing installation with vim-plug:
 ```vim
 function! BuildComposer(info)
   if a:info.status != 'unchanged' || a:info.force
-    !cargo build --release
-
-    " Or, if using vim
-    " !cargo build --release --no-default-features --features json-rpc
+    if has('nvim')
+      !cargo build --release
+    else
+      !cargo build --release --no-default-features --features json-rpc
+    endif
   endif
 endfunction
 
