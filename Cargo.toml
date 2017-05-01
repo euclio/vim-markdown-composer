@@ -5,16 +5,16 @@ authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.2"
+aurelius = "0.3"
 clap = "2"
 log = "0.3.1"
-log4rs = "0.6"
+log4rs = "0.7"
 log-panics = "1"
-serde = "0.9"
-serde_derive = "0.9"
+serde = "1"
+serde_derive = "1"
 
-serde_json = { version = "0.9", optional = true }
-rmp-serde = { version = "0.12", optional = true }
+serde_json = { version = "1", optional = true }
+rmp-serde = { version = "0.13", optional = true }
 
 [features]
 default = ["msgpack"]

@@ -28,12 +28,10 @@ use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
-use std::mem;
 use std::net::SocketAddr;
 use std::net::TcpListener;
-use std::path::PathBuf;
 
-use aurelius::{browser, Handle, Server};
+use aurelius::{browser, Listening, Server};
 use clap::{App, Arg};
 use serde::Deserialize;
 
@@ -67,8 +65,8 @@ pub struct Rpc {
 }
 
 #[cfg(feature = "json-rpc")]
-impl Deserialize for Rpc {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer {
+impl<'de> Deserialize<'de> for Rpc {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
         #[derive(Deserialize)]
         struct InnerRpc {
             method: String,
@@ -112,11 +110,11 @@ macro_rules! create_deserializer {
     ($reader:expr) => { serde_json::Deserializer::new(serde_json::de::IoRead::new($reader)) }
 }
 
-fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Handle) where R: Read {
+fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening) where R: Read {
     let mut deserializer = create_deserializer!(reader);
 
     loop {
-        let mut rpc = match Rpc::deserialize(&mut deserializer) {
+        let rpc = match Rpc::deserialize(&mut deserializer) {
             Ok(rpc) => rpc,
             #[cfg(feature = "msgpack")]
             Err(rmps::decode::Error::InvalidMarkerRead(_)) => {
@@ -128,9 +126,7 @@ fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Handle) where R
 
         match &rpc.method[..] {
             "send_data" => {
-                // Avoid copy
-                let data = mem::replace(&mut rpc.params[0], String::default());
-                handle.send(data);
+                handle.send(&rpc.params[0]);
             },
             "open_browser" => {
                 open_browser(&handle.http_addr().unwrap(), &browser);
@@ -181,33 +177,34 @@ fn main() {
             .help("A markdown file that should be rendered by the server on startup."))
         .get_matches();
 
-    let mut config = aurelius::Config::default();
+    let mut server = Server::new();
 
     if let Some(markdown_file) = matches.value_of("markdown-file") {
         debug!("Reading initial markdown file: {:?}", markdown_file);
+        let mut initial_markdown = String::new();
         let mut file = File::open(markdown_file).unwrap();
-        file.read_to_string(&mut config.initial_markdown).unwrap();
+        file.read_to_string(&mut initial_markdown).unwrap();
+        server.initial_markdown(initial_markdown);
     }
 
     if let Some(highlight_theme) = matches.value_of("theme") {
-        config.highlight_theme = highlight_theme.to_owned();
+        server.highlight_theme(highlight_theme);
     }
 
     if let Some(working_directory) = matches.value_of("working-directory") {
-        config.working_directory = PathBuf::from(working_directory);
+        server.working_directory(working_directory);
     }
 
     if let Some(custom_css) = matches.value_of("css") {
-        config.custom_css = custom_css.to_owned();
+        server.css(custom_css);
     }
 
-    let mut server = Server::new_with_config(config);
-    let mut handle = server.start();
+    let mut listening = server.start().unwrap();
 
     if !matches.is_present("no-auto-open") {
         let browser = matches.value_of("browser").map(|s| s.to_owned());
-        debug!("opening {} with {:?}", handle.http_addr().unwrap(), &browser);
-        open_browser(&handle.http_addr().unwrap(), &browser);
+        debug!("opening {} with {:?}", listening.http_addr().unwrap(), &browser);
+        open_browser(&listening.http_addr().unwrap(), &browser);
     }
 
     let browser = matches.value_of("browser").map(|s| s.to_string());
@@ -223,7 +220,7 @@ fn main() {
             match stream {
                 Ok(stream) => {
                     info!("got connection on {}", stream.local_addr().unwrap());
-                    read_rpc(stream, &browser, &mut handle);
+                    read_rpc(stream, &browser, &mut listening);
                 }
                 Err(e) => {
                     panic!("problem reading stream: {}", e);
@@ -231,6 +228,6 @@ fn main() {
             }
         }
     } else {
-        read_rpc(io::stdin(), &browser, &mut handle);
+        read_rpc(io::stdin(), &browser, &mut listening);
     };
 }
