@@ -9,6 +9,9 @@ vim-markdown-composer is a plugin that adds asynchronous markdown preview to
 
 ## Requirements
 
+This plugin requires vim 8 or Neovim. If you are using an OS with vim
+pre-installed, the system vim might be too old (see `vim --version`).
+
 This plugin supports Windows, macOS, and Linux.
 
 In addition to vim or Neovim, vim-markdown-composer requires a distribution of
