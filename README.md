@@ -7,6 +7,10 @@ vim-markdown-composer is a plugin that adds asynchronous markdown preview to
 
 ![](https://i.imgur.com/ZtyjjRD.gif)
 
+By default, vim-markdown-composer uses a blazing-fast CommonMark (and
+GitHub)-compliant renderer. However, it can be configured to use any external
+program for rendering, such as `pandoc`.
+
 ## Requirements
 
 This plugin requires vim 8 or Neovim. If you are using an OS with vim

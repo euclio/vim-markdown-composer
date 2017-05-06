@@ -1,11 +1,11 @@
 [package]
 name = "markdown-composer"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.3"
+aurelius = "0.4"
 clap = "2"
 log = "0.3.1"
 log4rs = "0.7"

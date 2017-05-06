@@ -28,8 +28,8 @@ use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
-use std::net::SocketAddr;
-use std::net::TcpListener;
+use std::net::{TcpListener, SocketAddr};
+use std::process::Command;
 
 use aurelius::{browser, Listening, Server};
 use clap::{App, Arg};
@@ -89,7 +89,9 @@ fn open_browser(http_addr: &SocketAddr, browser: &Option<String>) {
     if let &Some(ref browser) = browser {
         let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
         let (cmd, args) = split_cmd.split_first().unwrap();
-        browser::open_specific(&url, cmd, args).unwrap();
+        let mut command = Command::new(cmd);
+        command.args(args);
+        browser::open_specific(&url, command).unwrap();
     } else {
         browser::open(&url).unwrap();
     }
@@ -126,7 +128,7 @@ fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening) wher
 
         match &rpc.method[..] {
             "send_data" => {
-                handle.send(&rpc.params[0]);
+                handle.send(&rpc.params[0]).unwrap();
             },
             "open_browser" => {
                 open_browser(&handle.http_addr().unwrap(), &browser);
@@ -173,6 +175,10 @@ fn main() {
             .help("CSS that should be used to style the markdown output. Defaults to \
                    GitHub-like CSS.")
             .takes_value(true))
+        .arg(Arg::with_name("external-renderer")
+             .long("external-renderer")
+             .help("An external process that should be used for rendering markdown.")
+             .takes_value(true))
         .arg(Arg::with_name("markdown-file")
             .help("A markdown file that should be rendered by the server on startup."))
         .get_matches();
@@ -197,6 +203,10 @@ fn main() {
 
     if let Some(custom_css) = matches.value_of("css") {
         server.css(custom_css);
+    }
+
+    if let Some(external_renderer) = matches.value_of("external-renderer") {
+        server.external_renderer(external_renderer);
     }
 
     let mut listening = server.start().unwrap();

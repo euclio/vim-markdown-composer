@@ -23,6 +23,33 @@ g:markdown_composer_open_browser        *g:markdown_composer_open_browser*
 
             Default: 1
 
+g:markdown_composer_external_renderer   *g:markdown_composer_external_renderer*
+            An external command that should be run by the server to render
+            markdown. The command should read markdown from stdin and output
+            HTML on stdout. For example, to use pandoc, one might set: >
+
+    let g:markdown_composer_external_renderer='pandoc -f markdown -t html'
+<
+            The command must use UTF-8 encoding on both stdin and stdout.
+
+            Since rendering markdown externally is slower, if this option is
+            set, then `g:markdown_composer_refresh_rate` will default to a
+            higher rate. If this is undesired, you may set the refresh rate
+            manually. You might want to set the refresh rate higher or lower
+            depending on the size of the markdown documents that you usually
+            edit.
+
+            Not set by default.
+
+g:markdown_composer_refresh_rate        *g:markdown_composer_refresh_rate*
+
+            The rate in milliseconds that new markdown should be sent from the
+            buffer to the server. If set to 0, markdown will be sent on every
+            keystroke.
+
+            Default: 0 (unless `g:markdown_composer_external_renderer` is
+                     set, in which case the default is 500)
+
 g:markdown_composer_syntax_theme        *g:markdown_composer_syntax_theme*
             The theme that the preview should use for syntax highlighting. All
             themes from highlight.js are supported. A demo can be found at
