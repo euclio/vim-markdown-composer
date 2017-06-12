@@ -13,12 +13,10 @@ function! s:startServer()
     return
   endif
 
-  let l:args = ['cargo', 'run', '--release']
+  let l:args = [s:plugin_root . '/target/release/markdown-composer']
   if !has('nvim')
     call extend(l:args, ['--no-default-features', '--features', 'json-rpc'])
   endif
-
-  call extend(l:args, ['--'])
 
   if exists('g:markdown_composer_browser')
     call extend(l:args, ['--browser', g:markdown_composer_browser])
@@ -45,24 +43,49 @@ function! s:startServer()
     call add(l:args, s:file)
   endif
 
-  function! s:onServerExit(id, exit_status, event) abort
-    unlet s:job
-  endfunction
-
   if has('nvim')
-    let s:job = jobstart(l:args, {
+    function! s:onServerExit(id, exit_status, event) abort
+      unlet s:job
+    endfunction
+
+    let l:job = jobstart(l:args, {
           \ 'cwd': s:plugin_root,
           \ 'rpc': v:true,
           \ 'on_exit': function('s:onServerExit'),
           \ })
+    if l:job == -1
+      echom 'Could not execute markdown composer: try ' .
+            \ '`cargo build --release` in the plugin directory'
+      return
+    endif
+    let s:job = l:job
   else
+    function! s:onServerStart(channel, message) abort
+      let l:addr = 'localhost:' . a:message
+      let s:job = ch_open(l:addr, {
+           \ 'mode': 'json',
+           \ })
+    endfunction
+
+    function! s:onServerExit(channel, exit_status) abort
+      if exists('s:job')
+        unlet s:job
+      endif
+
+      if a:exit_status != 0
+        echom 'Could not execute markdown composer: try ' .
+              \ '`cargo build --release --no-default-features --features json-rpc`' .
+              \ ' in the plugin directory'
+      endif
+    endfunction
+
     " vim doesn't have a way to set the working directory for a job, so we have
     " to change the directory manually. See vim#1024.
     let l:original_cwd = getcwd()
     execute 'lcd' s:plugin_root
     call job_start(l:args, {
           \ 'mode': 'nl',
-          \ 'out_cb': function('s:startupCallback'),
+          \ 'out_cb': function('s:onServerStart'),
           \ 'err_io': 'null',
           \ 'exit_cb': function('s:onServerExit'),
           \ })
@@ -72,13 +95,6 @@ function! s:startServer()
   if s:refresh_rate > 0 && !exists('s:timer')
     let s:timer = timer_start(s:refresh_rate, function('s:markdownHandler'), { 'repeat': -1 })
    endif
-endfunction
-
-function! s:startupCallback(channel, message) abort
-  let l:addr = 'localhost:' . a:message
-  let s:job = ch_open(l:addr, {
-       \ 'mode': 'json',
-       \ })
 endfunction
 
 function! s:sendBuffer()
