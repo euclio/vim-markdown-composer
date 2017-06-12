@@ -134,8 +134,10 @@ fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening) wher
                 open_browser(&handle.http_addr().unwrap(), &browser);
             },
             "chdir" => {
-                handle.change_working_directory(rpc.params[0].clone());
-            },
+                let cwd = &rpc.params[0];
+                info!("changing working directory: {}", cwd);
+                handle.change_working_directory(cwd);
+            }
             method => panic!("Received unknown command: {}", method),
         }
     }

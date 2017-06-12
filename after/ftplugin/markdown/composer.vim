@@ -134,12 +134,14 @@ endfunction
 
 function! s:chdir()
   if exists('s:job')
+    let l:cwd = expand('%:p:h')
+
     if has('nvim')
-      call rpcnotify(s:job, 'chdir', getcwd())
+      call rpcnotify(s:job, 'chdir', l:cwd)
     else
       call ch_sendexpr(s:job, {
-            \ 'method': 'open_browser',
-            \ 'params': [getcwd()],
+            \ 'method': 'chdir',
+            \ 'params': [l:cwd],
             \ })
     endif
   endif
