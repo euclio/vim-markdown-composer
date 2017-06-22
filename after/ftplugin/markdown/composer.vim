@@ -14,9 +14,6 @@ function! s:startServer()
   endif
 
   let l:args = [s:plugin_root . '/target/release/markdown-composer']
-  if !has('nvim')
-    call extend(l:args, ['--no-default-features', '--features', 'json-rpc'])
-  endif
 
   if exists('g:markdown_composer_browser')
     call extend(l:args, ['--browser', g:markdown_composer_browser])
