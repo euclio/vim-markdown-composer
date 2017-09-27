@@ -66,7 +66,10 @@ pub struct Rpc {
 
 #[cfg(feature = "json-rpc")]
 impl<'de> Deserialize<'de> for Rpc {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
         #[derive(Deserialize)]
         struct InnerRpc {
             method: String,
@@ -112,7 +115,10 @@ macro_rules! create_deserializer {
     ($reader:expr) => { serde_json::Deserializer::new(serde_json::de::IoRead::new($reader)) }
 }
 
-fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening) where R: Read {
+fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening)
+where
+    R: Read,
+{
     let mut deserializer = create_deserializer!(reader);
 
     loop {
@@ -129,10 +135,10 @@ fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening) wher
         match &rpc.method[..] {
             "send_data" => {
                 handle.send(&rpc.params[0]).unwrap();
-            },
+            }
             "open_browser" => {
                 open_browser(&handle.http_addr().unwrap(), &browser);
-            },
+            }
             "chdir" => {
                 let cwd = &rpc.params[0];
                 info!("changing working directory: {}", cwd);
@@ -151,38 +157,59 @@ fn main() {
         .author(crate_authors!())
         .version(crate_version!())
         .about(ABOUT)
-        .arg(Arg::with_name("no-auto-open")
-            .long("no-auto-open")
-            .help("Don't open the web browser automatically."))
-        .arg(Arg::with_name("browser")
-            .long("browser")
-            .value_name("executable")
-            .help("Specify a browser that the program should open. If not supplied, the program \
-                   will determine the user's default browser.")
-            .takes_value(true))
-        .arg(Arg::with_name("theme")
-            .long("highlight-theme")
-            .help("The theme to use for syntax highlighting. All highlight.js themes are \
-                   supported.")
-            .default_value("github"))
-        .arg(Arg::with_name("working-directory")
-            .long("working-directory")
-            .value_name("dir")
-            .help("The directory that static files should be served out of. All relative links \
-                   in the markdown will be served relative to this directory.")
-            .takes_value(true))
-        .arg(Arg::with_name("css")
-            .long("custom-css")
-            .value_name("url/path")
-            .help("CSS that should be used to style the markdown output. Defaults to \
-                   GitHub-like CSS.")
-            .takes_value(true))
-        .arg(Arg::with_name("external-renderer")
-             .long("external-renderer")
-             .help("An external process that should be used for rendering markdown.")
-             .takes_value(true))
-        .arg(Arg::with_name("markdown-file")
-            .help("A markdown file that should be rendered by the server on startup."))
+        .arg(Arg::with_name("no-auto-open").long("no-auto-open").help(
+            "Don't open the web browser automatically.",
+        ))
+        .arg(
+            Arg::with_name("browser")
+                .long("browser")
+                .value_name("executable")
+                .help(
+                    "Specify a browser that the program should open. If not supplied, the program \
+                   will determine the user's default browser.",
+                )
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("theme")
+                .long("highlight-theme")
+                .help(
+                    "The theme to use for syntax highlighting. All highlight.js themes are \
+                   supported.",
+                )
+                .default_value("github"),
+        )
+        .arg(
+            Arg::with_name("working-directory")
+                .long("working-directory")
+                .value_name("dir")
+                .help(
+                    "The directory that static files should be served out of. All relative links \
+                   in the markdown will be served relative to this directory.",
+                )
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("css")
+                .long("custom-css")
+                .value_name("url/path")
+                .help(
+                    "CSS that should be used to style the markdown output. Defaults to \
+                   GitHub-like CSS.",
+                )
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("external-renderer")
+                .long("external-renderer")
+                .help(
+                    "An external process that should be used for rendering markdown.",
+                )
+                .takes_value(true),
+        )
+        .arg(Arg::with_name("markdown-file").help(
+            "A markdown file that should be rendered by the server on startup.",
+        ))
         .get_matches();
 
     let mut server = Server::new();
@@ -215,7 +242,11 @@ fn main() {
 
     if !matches.is_present("no-auto-open") {
         let browser = matches.value_of("browser").map(|s| s.to_owned());
-        debug!("opening {} with {:?}", listening.http_addr().unwrap(), &browser);
+        debug!(
+            "opening {} with {:?}",
+            listening.http_addr().unwrap(),
+            &browser
+        );
         open_browser(&listening.http_addr().unwrap(), &browser);
     }
 
@@ -236,7 +267,7 @@ fn main() {
                 }
                 Err(e) => {
                     panic!("problem reading stream: {}", e);
-                },
+                }
             }
         }
     } else {
