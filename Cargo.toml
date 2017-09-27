@@ -5,7 +5,7 @@ authors = ["Andy Russell <arussell123@gmail.com>"]
 description = "A complete solution for previewing markdown."
 
 [dependencies]
-aurelius = "0.4"
+aurelius = "0.5"
 clap = "2"
 log = "0.3.1"
 log4rs = "0.7"
