@@ -28,7 +28,7 @@ use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
-use std::net::{TcpListener, SocketAddr};
+use std::net::SocketAddr;
 use std::process::Command;
 
 use aurelius::{browser, Listening, Server};
@@ -100,26 +100,15 @@ fn open_browser(http_addr: &SocketAddr, browser: &Option<String>) {
     }
 }
 
-/// Slight hack to allow returning different `Deserializer`s.
-///
-/// The msgpack `Deserializer` type isn't actually nameable, because `new()` returns a type with a
-/// private type in the name. So, we just use a macro to keep the creation inline, letting
-/// type-inference do the work.
-#[cfg(feature = "msgpack")]
-macro_rules! create_deserializer {
-    ($reader:expr) => { rmps::Deserializer::new(std::io::BufReader::new($reader)) }
-}
-
-#[cfg(feature = "json-rpc")]
-macro_rules! create_deserializer {
-    ($reader:expr) => { serde_json::Deserializer::new(serde_json::de::IoRead::new($reader)) }
-}
-
 fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening)
 where
     R: Read,
 {
-    let mut deserializer = create_deserializer!(reader);
+    #[cfg(feature = "msgpack")]
+    let mut deserializer = rmps::Deserializer::new(std::io::BufReader::new(reader));
+
+    #[cfg(feature = "json-rpc")]
+    let mut deserializer = serde_json::Deserializer::new(serde_json::de::IoRead::new(reader));
 
     loop {
         let rpc = match Rpc::deserialize(&mut deserializer) {
@@ -252,25 +241,5 @@ fn main() {
 
     let browser = matches.value_of("browser").map(|s| s.to_string());
 
-    if cfg!(feature = "json-rpc") {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        info!("listening on {}", listener.local_addr().unwrap());
-
-        // Send port to vim
-        println!("{}", listener.local_addr().unwrap().port());
-
-        for stream in listener.incoming() {
-            match stream {
-                Ok(stream) => {
-                    info!("got connection on {}", stream.local_addr().unwrap());
-                    read_rpc(stream, &browser, &mut listening);
-                }
-                Err(e) => {
-                    panic!("problem reading stream: {}", e);
-                }
-            }
-        }
-    } else {
-        read_rpc(io::stdin(), &browser, &mut listening);
-    };
+    read_rpc(io::stdin(), &browser, &mut listening);
 }

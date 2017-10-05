@@ -40,11 +40,13 @@ function! s:startServer()
     call add(l:args, s:file)
   endif
 
-  if has('nvim')
-    function! s:onServerExit(id, exit_status, event) abort
+  function! s:onServerExit(id, exit_status, event) abort
+    if exists(s:job)
       unlet s:job
-    endfunction
+    endif
+  endfunction
 
+  if has('nvim')
     let l:job = jobstart(l:args, {
           \ 'cwd': s:plugin_root,
           \ 'rpc': v:true,
@@ -57,18 +59,7 @@ function! s:startServer()
     endif
     let s:job = l:job
   else
-    function! s:onServerStart(channel, message) abort
-      let l:addr = 'localhost:' . a:message
-      let s:job = ch_open(l:addr, {
-           \ 'mode': 'json',
-           \ })
-    endfunction
-
     function! s:onServerExit(channel, exit_status) abort
-      if exists('s:job')
-        unlet s:job
-      endif
-
       if a:exit_status != 0
         echom 'Could not execute markdown composer: try ' .
               \ '`cargo build --release --no-default-features --features json-rpc`' .
@@ -76,17 +67,16 @@ function! s:startServer()
       endif
     endfunction
 
-    " vim doesn't have a way to set the working directory for a job, so we have
-    " to change the directory manually. See vim#1024.
-    let l:original_cwd = getcwd()
-    execute 'lcd' s:plugin_root
-    call job_start(l:args, {
-          \ 'mode': 'nl',
-          \ 'out_cb': function('s:onServerStart'),
+    let l:job = job_start(l:args, {
+          \ 'mode': 'json',
+          \ 'cwd': s:plugin_root,
           \ 'err_io': 'null',
           \ 'exit_cb': function('s:onServerExit'),
           \ })
-    execute 'lcd' l:original_cwd
+    let l:channel = job_getchannel(l:job)
+    if string(l:channel) !=# 'channel fail'
+      let s:job = job_getchannel(l:job)
+    endif
   endif
 
   if s:refresh_rate > 0 && !exists('s:timer')
