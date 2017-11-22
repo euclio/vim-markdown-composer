@@ -2,8 +2,8 @@
 
 [![Build Status](https://travis-ci.org/euclio/vim-markdown-composer.svg)](https://travis-ci.org/euclio/vim-markdown-composer)
 
-vim-markdown-composer is a plugin that adds asynchronous markdown preview to
-[Neovim] and [vim].
+vim-markdown-composer is a plugin that adds asynchronous Markdown preview to
+[Neovim] and [Vim].
 
 ![](https://i.imgur.com/ZtyjjRD.gif)
 
@@ -13,12 +13,12 @@ program for rendering, such as `pandoc`.
 
 ## Requirements
 
-This plugin requires vim 8 or Neovim. If you are using an OS with vim
-pre-installed, the system vim might be too old (see `vim --version`).
+This plugin requires Neovim or Vim 8. If you are using an OS with Vim
+pre-installed, the system Vim might be too old (see `vim --version`).
 
 This plugin supports Windows, macOS, and Linux.
 
-In addition to vim or Neovim, vim-markdown-composer requires a distribution of
+In addition to Neovim or Vim, vim-markdown-composer requires a distribution of
 [Rust] with `cargo`. To easily install the lastest version of Rust with `cargo`,
 check out [rustup.rs](https://www.rustup.rs/).
 
@@ -54,19 +54,19 @@ If you use the above snippet, everything should be taken care of automatically.
 
 `:help markdown-composer`, or check out the `doc` directory.
 
-# Acknowledgments
+## Acknowledgments
 
 This plugin is inspired by suan's [vim-instant-markdown].
 
-This plugin was built with [aurelius], a Rust library for live-updating markdown
+This plugin was built with [aurelius], a Rust library for live-updating Markdown
 previews.
 
 [Rust]: http://www.rust-lang.org/
 [cargo]: https://crates.io/
-[Neovim]: http://neovim.io/
-[vim]: http://www.vim.org
+[Neovim]: https://neovim.io/
+[Vim]: http://www.vim.org
 [vim-instant-markdown]: https://github.com/suan/vim-instant-markdown
-[Neovim remote plugin]: http://neovim.io/doc/user/remote_plugin.html
+[Neovim remote plugin]: https://neovim.io/doc/user/remote_plugin.html
 [vim-plug]: https://github.com/junegunn/vim-plug
 [msgpack-rpc]: https://github.com/msgpack-rpc/msgpack-rpc
 [aurelius]: https://github.com/euclio/aurelius
