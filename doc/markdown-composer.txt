@@ -68,6 +68,15 @@ g:markdown_composer_autostart           *g:markdown_composer_autostart*
 
             Default: 1
 
+g:markdown_composer_custom_css          *g:markdown_composer_custom_css*
+            A list of custom CSS URIs that should be loaded instead of the
+            GitHub styles.
+            
+            You may provide local paths and URLs, but they must be absolute
+            and prefixed with a scheme ('file:///home/euclio/markdown.css')
+
+            Default: []
+
 COMMANDS                                *markdown-composer-commands*
 
 The plugin should start automatically whenever you open a markdown buffer.

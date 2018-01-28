@@ -17,6 +17,7 @@ extern crate aurelius;
 extern crate log4rs;
 extern crate log_panics;
 extern crate serde;
+extern crate shlex;
 
 #[cfg(feature = "msgpack")]
 extern crate rmp_serde as rmps;
@@ -29,13 +30,15 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::process::Command;
 
-use aurelius::{browser, Listening, Server};
+use aurelius::{browser, Config, Listening, Server};
 use clap::{App, Arg};
 use serde::Deserialize;
+use shlex::Shlex;
 
-static ABOUT: &'static str = r"
+static ABOUT: &str = r"
 Creates a static server for serving markdown previews. Reads RPC requests from stdin.
 
 Supported procedures:
@@ -186,7 +189,8 @@ fn main() {
                     "CSS that should be used to style the markdown output. Defaults to \
                    GitHub-like CSS.",
                 )
-                .takes_value(true),
+                .takes_value(true)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("external-renderer")
@@ -201,31 +205,35 @@ fn main() {
         ))
         .get_matches();
 
-    let mut server = Server::new();
+    let mut config = Config::default();
 
-    if let Some(markdown_file) = matches.value_of("markdown-file") {
-        debug!("Reading initial markdown file: {:?}", markdown_file);
-        let mut initial_markdown = String::new();
-        let mut file = File::open(markdown_file).unwrap();
-        file.read_to_string(&mut initial_markdown).unwrap();
-        server.initial_markdown(initial_markdown);
-    }
+    config.initial_markdown = matches.value_of("markdown-file")
+        .map(|file_name| {
+            let mut markdown = String::new();
+            let mut file = File::open(file_name).unwrap();
+            file.read_to_string(&mut markdown).unwrap();
+            markdown
+        });
 
     if let Some(highlight_theme) = matches.value_of("theme") {
-        server.highlight_theme(highlight_theme);
+        config.highlight_theme = highlight_theme.to_owned();
     }
 
     if let Some(working_directory) = matches.value_of("working-directory") {
-        server.working_directory(working_directory);
+        config.working_directory = PathBuf::from(working_directory);
     }
 
-    if let Some(custom_css) = matches.value_of("css") {
-        server.css(custom_css);
+    if let Some(custom_css) = matches.values_of("css") {
+        config.custom_css = custom_css.map(|css| css.to_owned()).collect();
     }
 
     if let Some(external_renderer) = matches.value_of("external-renderer") {
-        server.external_renderer(external_renderer);
+        let words = Shlex::new(external_renderer).collect::<Vec<_>>();
+        let (command, args) = words.split_first().expect("command was empty");
+        config.external_renderer = Some((command.to_owned(), args.to_vec()));
     }
+
+    let server = Server::new_with_config(config);
 
     let mut listening = server.start().unwrap();
 

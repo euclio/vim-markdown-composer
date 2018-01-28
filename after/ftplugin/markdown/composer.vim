@@ -33,6 +33,10 @@ function! s:startServer()
     call extend(l:args, ['--external-renderer', g:markdown_composer_external_renderer])
   endif
 
+  for l:css in get(g:, 'markdown_composer_custom_css', [])
+    call extend(l:args, ['--custom-css', l:css])
+  endfor
+
   call extend(l:args, ['--working-directory', getcwd()])
 
   let s:file = expand('%:p')
