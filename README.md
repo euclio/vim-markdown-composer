@@ -30,7 +30,7 @@ managers, I recommend [vim-plug].
 
 ### vim-plug
 
-Here's an an example of managing installation with vim-plug:
+Here's an example of managing installation with vim-plug:
 
 ```vim
 function! BuildComposer(info)
