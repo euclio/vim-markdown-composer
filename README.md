@@ -64,6 +64,12 @@ $ cargo build --release --no-default-features --features json-rpc
 $ cargo build --release
 ```
 
+### Dein.vim
+
+```
+call dein#add('euclio/vim-markdown-composer', { 'build': 'cargo build --release' })
+```
+
 ### Other plugin managers
 
 You should run `cargo build --release` in the plugin directory after
