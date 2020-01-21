@@ -1,6 +1,6 @@
 # vim-markdown-composer
 
-[![Build Status](https://travis-ci.org/euclio/vim-markdown-composer.svg)](https://travis-ci.org/euclio/vim-markdown-composer)
+![](https://github.com/euclio/vim-markdown-composer/workflows/Continuous%20integration/badge.svg)
 
 vim-markdown-composer is a plugin that adds asynchronous Markdown preview to
 [Neovim] and [Vim].
