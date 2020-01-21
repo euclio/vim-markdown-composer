@@ -4,24 +4,6 @@
 //! in a browser. As new messages are received through stdin, the markdown is asynchronously
 //! rendered in the browser (no refresh is required).
 
-#[macro_use]
-extern crate clap;
-
-#[macro_use]
-extern crate log;
-
-extern crate aurelius;
-extern crate log4rs;
-extern crate log_panics;
-extern crate serde;
-extern crate shlex;
-
-#[cfg(feature = "msgpack")]
-extern crate rmp_serde as rmps;
-
-#[cfg(feature = "json-rpc")]
-extern crate serde_json;
-
 use std::default::Default;
 use std::fs::File;
 use std::io::prelude::*;
@@ -29,6 +11,9 @@ use std::io;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process::Command;
+
+use clap::{crate_authors, crate_version};
+use log::*;
 
 use aurelius::{browser, Config, Listening, Server};
 use clap::{App, Arg};
@@ -105,7 +90,7 @@ where
     R: Read,
 {
     #[cfg(feature = "msgpack")]
-    let mut deserializer = rmps::Deserializer::new(std::io::BufReader::new(reader));
+    let mut deserializer = rmp_serde::Deserializer::new(std::io::BufReader::new(reader));
 
     #[cfg(feature = "json-rpc")]
     let mut deserializer = serde_json::Deserializer::new(serde_json::de::IoRead::new(reader));
@@ -114,7 +99,7 @@ where
         let rpc = match Rpc::deserialize(&mut deserializer) {
             Ok(rpc) => rpc,
             #[cfg(feature = "msgpack")]
-            Err(rmps::decode::Error::InvalidMarkerRead(_)) => {
+            Err(rmp_serde::decode::Error::InvalidMarkerRead(_)) => {
                 // In this case, the remote client probably just hung up.
                 break;
             }
