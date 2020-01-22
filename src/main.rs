@@ -5,17 +5,17 @@
 //! rendered in the browser (no refresh is required).
 
 use std::default::Default;
-use std::fs::File;
+use std::error::Error;
+use std::fs;
 use std::io::prelude::*;
 use std::io;
-use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::mem;
 use std::process::Command;
 
 use clap::{crate_authors, crate_version};
 use log::*;
 
-use aurelius::{browser, Config, Listening, Server};
+use aurelius::Server;
 use clap::{App, Arg};
 use serde::Deserialize;
 use shlex::Shlex;
@@ -71,24 +71,11 @@ impl<'de> Deserialize<'de> for Rpc {
     }
 }
 
-fn open_browser(http_addr: &SocketAddr, browser: &Option<String>) {
-    let url = format!("http://{}", http_addr);
-
-    if let &Some(ref browser) = browser {
-        let split_cmd = browser.split_whitespace().collect::<Vec<_>>();
-        let (cmd, args) = split_cmd.split_first().unwrap();
-        let mut command = Command::new(cmd);
-        command.args(args);
-        browser::open_specific(&url, command).unwrap();
-    } else {
-        browser::open(&url).unwrap();
-    }
-}
-
-fn read_rpc<R>(reader: R, browser: &Option<String>, handle: &mut Listening)
-where
-    R: Read,
-{
+fn read_rpc(
+    reader: impl Read,
+    mut server: Server,
+    browser: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "msgpack")]
     let mut deserializer = rmp_serde::Deserializer::new(std::io::BufReader::new(reader));
 
@@ -96,7 +83,7 @@ where
     let mut deserializer = serde_json::Deserializer::new(serde_json::de::IoRead::new(reader));
 
     loop {
-        let rpc = match Rpc::deserialize(&mut deserializer) {
+        let mut rpc = match Rpc::deserialize(&mut deserializer) {
             Ok(rpc) => rpc,
             #[cfg(feature = "msgpack")]
             Err(rmp_serde::decode::Error::InvalidMarkerRead(_)) => {
@@ -106,24 +93,34 @@ where
             Err(err) => panic!("{}", err),
         };
 
-        match &rpc.method[..] {
+        let res = match &rpc.method[..] {
             "send_data" => {
-                handle.send(&rpc.params[0]).unwrap();
+                let markdown = mem::replace(&mut rpc.params[0], String::new());
+                server.send(markdown)
             }
             "open_browser" => {
-                open_browser(&handle.http_addr().unwrap(), &browser);
-            }
+                match browser {
+                    Some(browser) => server.open_specific_browser(Command::new(browser)),
+                    None => server.open_browser(),
+                }
+            },
             "chdir" => {
                 let cwd = &rpc.params[0];
                 info!("changing working directory: {}", cwd);
-                handle.change_working_directory(cwd);
+                server.set_static_root(cwd);
+                Ok(())
             }
             method => panic!("Received unknown command: {}", method),
-        }
+        };
+
+        // TODO: Return error to the client instead of exiting the process.
+        res?;
     }
+
+    Ok(())
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
@@ -187,49 +184,45 @@ fn main() {
         ))
         .get_matches();
 
-    let mut config = Config::default();
-
-    config.initial_markdown = matches.value_of("markdown-file")
-        .map(|file_name| {
-            let mut markdown = String::new();
-            let mut file = File::open(file_name).unwrap();
-            file.read_to_string(&mut markdown).unwrap();
-            markdown
-        });
-
-    if let Some(highlight_theme) = matches.value_of("theme") {
-        config.highlight_theme = highlight_theme.to_owned();
-    }
-
-    if let Some(working_directory) = matches.value_of("working-directory") {
-        config.working_directory = PathBuf::from(working_directory);
-    }
-
-    if let Some(custom_css) = matches.values_of("css") {
-        config.custom_css = custom_css.map(|css| css.to_owned()).collect();
-    }
+    let mut server = Server::bind("localhost:0")?;
 
     if let Some(external_renderer) = matches.value_of("external-renderer") {
         let words = Shlex::new(external_renderer).collect::<Vec<_>>();
         let (command, args) = words.split_first().expect("command was empty");
-        config.external_renderer = Some((command.to_owned(), args.to_vec()));
+        let mut command = Command::new(command);
+        command.args(args);
+        server.set_external_renderer(command);
     }
 
-    let server = Server::new_with_config(config);
+    if let Some(highlight_theme) = matches.value_of("theme") {
+        server.set_highlight_theme(highlight_theme.to_string());
+    }
 
-    let mut listening = server.start().unwrap();
+    if let Some(working_directory) = matches.value_of("working-directory") {
+        server.set_static_root(working_directory);
+    }
+
+    if let Some(custom_css) = matches.values_of("css") {
+        server.set_custom_css(custom_css.map(String::from).collect())?;
+    }
+
+    if let Some(file_name) = matches.value_of("markdown-file") {
+        server.send(fs::read_to_string(file_name)?)?;
+    }
+
+    let browser = matches.value_of("browser");
 
     if !matches.is_present("no-auto-open") {
-        let browser = matches.value_of("browser").map(|s| s.to_owned());
-        debug!(
-            "opening {} with {:?}",
-            listening.http_addr().unwrap(),
-            &browser
-        );
-        open_browser(&listening.http_addr().unwrap(), &browser);
+        let res = match browser {
+            Some(browser) => server.open_specific_browser(Command::new(browser)),
+            None => server.open_browser(),
+        };
+
+        res.unwrap();
     }
 
-    let browser = matches.value_of("browser").map(|s| s.to_string());
+    let stdin = io::stdin();
+    let stdin_lock = stdin.lock();
 
-    read_rpc(io::stdin(), &browser, &mut listening);
+    read_rpc(stdin_lock, server, browser)
 }
