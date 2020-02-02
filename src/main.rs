@@ -60,6 +60,8 @@ impl<'de> Deserialize<'de> for Rpc {
 
         let (msg_type, method, params) = <(u64, String, Vec<String>)>::deserialize(deserializer)?;
 
+        debug!("<- [{}, {}, {:?}]", msg_type, method, params);
+
         if msg_type != NOTIFICATION_MESSAGE_TYPE {
             return Err(Error::invalid_value(
                 Unexpected::Unsigned(msg_type),
@@ -76,7 +78,7 @@ impl<'de> Deserialize<'de> for Rpc {
 }
 
 // FIXME: Workaround for rust-lang/rust#55779. Move back to the impl when fixed.
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[allow(unused)]
 struct InnerRpc {
     method: String,
@@ -90,6 +92,8 @@ impl<'de> Deserialize<'de> for Rpc {
         D: serde::Deserializer<'de>,
     {
         let (id, rpc): (u64, InnerRpc) = Deserialize::deserialize(deserializer)?;
+
+        debug!("<- [{}, {:?}]", id, rpc);
 
         Ok(Rpc {
             id: id,
