@@ -122,6 +122,10 @@ fn read_rpc(
                 // In this case, the remote client probably just hung up.
                 break;
             }
+            #[cfg(feature = "json-rpc")]
+            Err(err) if err.is_eof() => {
+                break;
+            }
             Err(err) => panic!("{}", err),
         };
 

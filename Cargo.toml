@@ -21,3 +21,6 @@ rmp-serde = { version = "0.14.0", optional = true }
 default = ["msgpack"]
 msgpack = ["rmp-serde"]
 json-rpc = ["serde_json"]
+
+[dev-dependencies]
+assert_cmd = "0.12.0"
