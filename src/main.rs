@@ -75,18 +75,20 @@ impl<'de> Deserialize<'de> for Rpc {
     }
 }
 
+// FIXME: Workaround for rust-lang/rust#55779. Move back to the impl when fixed.
+#[derive(Deserialize)]
+#[allow(unused)]
+struct InnerRpc {
+    method: String,
+    params: Vec<String>,
+}
+
 #[cfg(feature = "json-rpc")]
 impl<'de> Deserialize<'de> for Rpc {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        struct InnerRpc {
-            method: String,
-            params: Vec<String>,
-        }
-
         let (id, rpc): (u64, InnerRpc) = Deserialize::deserialize(deserializer)?;
 
         Ok(Rpc {
