@@ -35,7 +35,6 @@ Supported procedures:
 ///
 /// Assumes that the request's parameters are always `String`s.
 #[derive(Debug)]
-#[cfg_attr(feature = "msgpack", derive(Deserialize))]
 pub struct Rpc {
     /// The type of msgpack request. Should always be notification.
     #[cfg(feature = "msgpack")]
@@ -47,6 +46,33 @@ pub struct Rpc {
 
     pub method: String,
     pub params: Vec<String>,
+}
+
+#[cfg(feature = "msgpack")]
+impl<'de> Deserialize<'de> for Rpc {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{Error, Unexpected};
+
+        const NOTIFICATION_MESSAGE_TYPE: u64 = 2;
+
+        let (msg_type, method, params) = <(u64, String, Vec<String>)>::deserialize(deserializer)?;
+
+        if msg_type != NOTIFICATION_MESSAGE_TYPE {
+            return Err(Error::invalid_value(
+                Unexpected::Unsigned(msg_type),
+                &format!("notification message type ({})", NOTIFICATION_MESSAGE_TYPE).as_str(),
+            ));
+        }
+
+        Ok(Rpc {
+            msg_type,
+            method,
+            params,
+        })
+    }
 }
 
 #[cfg(feature = "json-rpc")]
