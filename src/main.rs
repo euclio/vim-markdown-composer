@@ -156,7 +156,7 @@ fn read_rpc(
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
@@ -254,11 +254,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             None => server.open_browser(),
         };
 
-        res.unwrap();
+        res?;
     }
 
     let stdin = io::stdin();
     let stdin_lock = stdin.lock();
 
     read_rpc(stdin_lock, server, browser)
+}
+
+fn main() {
+    if let Err(err) = run() {
+        error!("fatal error: {}", err);
+    }
 }
