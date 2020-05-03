@@ -218,9 +218,17 @@ fn run() -> Result<(), Box<dyn Error>> {
         .arg(Arg::with_name("markdown-file").help(
             "A markdown file that should be rendered by the server on startup.",
         ))
+        .arg(
+            Arg::with_name("server-port")
+                .long("server-port")
+                .help(
+                    "Server port. Defaults to requesting a port assignment from the OS.",
+                )
+                .default_value("0"),
+        )
         .get_matches();
 
-    let mut server = Server::bind("localhost:0")?;
+    let mut server = Server::bind(format!("localhost:{}", matches.value_of("server-port").unwrap()))?;
 
     if let Some(external_renderer) = matches.value_of("external-renderer") {
         let words = Shlex::new(external_renderer).collect::<Vec<_>>();

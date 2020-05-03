@@ -77,6 +77,13 @@ g:markdown_composer_custom_css          *g:markdown_composer_custom_css*
 
             Default: []
 
+g:markdown_composer_server_port           *g:markdown_composer_server_port*
+            Explictly set aurelius port.
+
+            https://github.com/euclio/aurelius
+
+            Default: 0 (requests a port assignment from the OS)
+
 COMMANDS                                *markdown-composer-commands*
 
 The plugin should start automatically whenever you open a markdown buffer.

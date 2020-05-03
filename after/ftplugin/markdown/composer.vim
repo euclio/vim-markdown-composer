@@ -37,6 +37,10 @@ function! s:startServer()
     call extend(l:args, ['--custom-css', l:css])
   endfor
 
+  if exists('g:markdown_composer_server_port')
+    call extend(l:args, ['--server-port', g:markdown_composer_server_port])
+  endif
+
   call extend(l:args, ['--working-directory', getcwd()])
 
   let s:file = expand('%:p')
