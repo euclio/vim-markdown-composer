@@ -77,6 +77,14 @@ installation. Vim support requires the `json-rpc` cargo feature.
 
 If you use the above snippet, everything should be taken care of automatically.
 
+## Plugin Options
+
+By default, `vim-markdown-composer` will open a new browser tab with the rendered preview. This can be prevented by setting the following in your Vim configuration:
+
+```
+let g:markdown_composer_autostart = 0
+```
+
 ## Documentation
 
 `:help markdown-composer`, or check out the `doc` directory.
