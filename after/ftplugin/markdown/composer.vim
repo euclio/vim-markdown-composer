@@ -33,6 +33,14 @@ function! s:startServer()
     call extend(l:args, ['--external-renderer', g:markdown_composer_external_renderer])
   endif
 
+  if exists('g:markdown_composer_address')
+    call extend(l:args, ['--address', g:markdown_composer_address])
+  endif
+
+  if exists('g:markdown_composer_port')
+    call extend(l:args, ['--port', g:markdown_composer_port])
+  endif
+
   for l:css in get(g:, 'markdown_composer_custom_css', [])
     call extend(l:args, ['--custom-css', l:css])
   endfor
