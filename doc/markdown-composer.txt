@@ -76,11 +76,21 @@ g:markdown_composer_autostart           *g:markdown_composer_autostart*
 g:markdown_composer_custom_css          *g:markdown_composer_custom_css*
             A list of custom CSS URIs that should be loaded instead of the
             GitHub styles.
-            
+
             You may provide local paths and URLs, but they must be absolute
             and prefixed with a scheme ('file:///home/euclio/markdown.css')
 
             Default: []
+
+g:markdown_composer_address          *g:markdown_composer_address*
+            The address which the server will listen on.
+
+            Default: localhost
+
+g:markdown_composer_port          *g:markdown_composer_port*
+            The port number which the server will listen on.
+
+            Default: 0 (ephemeral)
 
 COMMANDS                                *markdown-composer-commands*
 
