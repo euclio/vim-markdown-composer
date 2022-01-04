@@ -14,8 +14,13 @@ you edit the buffer in Vim.
 OPTIONS                                 *markdown-composer-options*
 
 g:markdown_composer_browser             *g:markdown_composer_browser*
-            Specifies a specific browser for the plugin to use. If not set,
-            then the plugin will try to determine the default browser.
+            String. Specifies a specific browser for the plugin to use when
+            opening the markdown preview. The provided string will be parsed
+            as shell words and then invoked as a command and arguments.
+            The preview URI will be passed as the final argument.
+
+            Default: unset. The plugin will try to determine the default
+            browser using a platform-specific mechanism.
 
 g:markdown_composer_open_browser        *g:markdown_composer_open_browser*
             If set to 0, the plugin will not attempt to open the user's

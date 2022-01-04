@@ -7,8 +7,8 @@
 use std::default::Default;
 use std::error::Error;
 use std::fs;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::mem;
 use std::process::Command;
 
@@ -223,11 +223,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut server = Server::bind("localhost:0")?;
 
     if let Some(external_renderer) = matches.value_of("external-renderer") {
-        let words = Shlex::new(external_renderer).collect::<Vec<_>>();
-        let (command, args) = words.split_first().expect("command was empty");
-        let mut command = Command::new(command);
-        command.args(args);
-        server.set_external_renderer(command);
+        server.set_external_renderer(parse_command(external_renderer));
     }
 
     if let Some(highlight_theme) = matches.value_of("theme") {
@@ -249,12 +245,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     let browser = matches.value_of("browser");
 
     if !matches.is_present("no-auto-open") {
-        let res = match browser {
-            Some(browser) => server.open_specific_browser(Command::new(browser)),
-            None => server.open_browser(),
+        if let Some(browser) = browser {
+            server.open_specific_browser(parse_command(browser))?;
+        } else {
+            server.open_browser()?;
         };
-
-        res?;
     }
 
     let stdin = io::stdin();
@@ -267,4 +262,12 @@ fn main() {
     if let Err(err) = run() {
         error!("fatal error: {}", err);
     }
+}
+
+fn parse_command(s: &str) -> Command {
+    let words = Shlex::new(s).collect::<Vec<_>>();
+    let (command, args) = words.split_first().expect("command was empty");
+    let mut command = Command::new(command);
+    command.args(args);
+    command
 }
