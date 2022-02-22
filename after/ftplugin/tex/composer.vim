@@ -30,7 +30,7 @@ function! s:startServer()
   endif
 
   if exists('g:markdown_composer_external_renderer')
-    call extend(l:args, ['--external-renderer', g:markdown_composer_external_renderer . ' -f ' . &ft . ' -t html'])
+    call extend(l:args, ['--external-renderer', g:markdown_composer_external_renderer . ' -f la' . &ft . ' -t html'])
   endif
 
   if exists('g:markdown_composer_address')
@@ -153,7 +153,7 @@ command! ComposerJob call s:echoJob()
 
 augroup markdown-composer
   autocmd!
-  autocmd BufEnter *.md,*.mkd,*.markdown,*.rst
+  autocmd BufEnter *.md,*.mkd,*.markdown,*.rst,*.tex,*.latex
         \ if !(exists('g:markdown_composer_autostart') && !g:markdown_composer_autostart) |
         \   call s:startServer() |
         \ endif |
@@ -161,12 +161,12 @@ augroup markdown-composer
         \ call s:sendBuffer()
 
   if s:refresh_rate == 0
-    autocmd TextChanged,TextChangedI *.md,*.mkd,*.markdown,*.rst call s:sendBuffer()
+    autocmd TextChanged,TextChangedI *.md,*.mkd,*.markdown,*.rst,*.tex,*.latex call s:sendBuffer()
   endif
 augroup END
 
 function! s:markdownHandler(timer)
-  if &filetype ==# 'markdown' || &filetype ==# 'pandoc' || &filetype ==# 'rst' 
+  if &filetype ==# 'markdown' || &filetype ==# 'pandoc' || &filetype ==# 'rst' || &filetype ==# 'latex' || &filetype ==# 'tex'
     call s:sendBuffer()
   endif
 endfunction
