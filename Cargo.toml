@@ -6,6 +6,7 @@ description = "A complete solution for previewing markdown."
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.56"
 aurelius = "0.7.2"
 clap = "2.33.0"
 log = "0.4.6"
