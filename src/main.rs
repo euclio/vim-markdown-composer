@@ -7,8 +7,8 @@
 use std::default::Default;
 use std::error::Error;
 use std::fs;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::mem;
 use std::process::Command;
 
@@ -134,11 +134,9 @@ fn read_rpc(
                 let markdown = mem::replace(&mut rpc.params[0], String::new());
                 server.send(markdown)
             }
-            "open_browser" => {
-                match browser {
-                    Some(browser) => server.open_specific_browser(Command::new(browser)),
-                    None => server.open_browser(),
-                }
+            "open_browser" => match browser {
+                Some(browser) => server.open_specific_browser(Command::new(browser)),
+                None => server.open_browser(),
             },
             "chdir" => {
                 let cwd = &rpc.params[0];
@@ -164,9 +162,11 @@ fn run() -> Result<(), Box<dyn Error>> {
         .author(crate_authors!())
         .version(crate_version!())
         .about(ABOUT)
-        .arg(Arg::with_name("no-auto-open").long("no-auto-open").help(
-            "Don't open the web browser automatically.",
-        ))
+        .arg(
+            Arg::with_name("no-auto-open")
+                .long("no-auto-open")
+                .help("Don't open the web browser automatically."),
+        )
         .arg(
             Arg::with_name("browser")
                 .long("browser")
@@ -210,14 +210,13 @@ fn run() -> Result<(), Box<dyn Error>> {
         .arg(
             Arg::with_name("external-renderer")
                 .long("external-renderer")
-                .help(
-                    "An external process that should be used for rendering markdown.",
-                )
+                .help("An external process that should be used for rendering markdown.")
                 .takes_value(true),
         )
-        .arg(Arg::with_name("markdown-file").help(
-            "A markdown file that should be rendered by the server on startup.",
-        ))
+        .arg(
+            Arg::with_name("markdown-file")
+                .help("A markdown file that should be rendered by the server on startup."),
+        )
         .get_matches();
 
     let mut server = Server::bind("localhost:0")?;
