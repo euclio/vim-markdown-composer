@@ -5,20 +5,25 @@
 //! rendered in the browser (no refresh is required).
 
 use std::default::Default;
-use std::fs;
-use std::io;
 use std::io::prelude::*;
 use std::mem;
-use std::process::Command;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{crate_authors, crate_version};
+use futures_util::TryStreamExt;
 use log::*;
+use tokio::io;
+use tokio_serde::SymmetricallyFramed;
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 use aurelius::Server;
 use clap::{App, Arg};
 use serde::Deserialize;
 use shlex::Shlex;
+use tokio::fs;
+use tokio::process::Command;
+
+use markdown_composer::Decoder;
 
 static ABOUT: &str = r"
 Creates a static server for serving markdown previews. Reads RPC requests from stdin.
@@ -31,126 +36,8 @@ Supported procedures:
     chdir(path: String)         Changes the directory that the server serves static files from.
 ";
 
-/// Represents an RPC request.
-///
-/// Assumes that the request's parameters are always `String`s.
-#[derive(Debug)]
-pub struct Rpc {
-    /// The type of msgpack request. Should always be notification.
-    #[cfg(feature = "msgpack")]
-    msg_type: u64,
-
-    /// The ID of the JSON rpc request.
-    #[cfg(feature = "json-rpc")]
-    id: u64,
-
-    pub method: String,
-    pub params: Vec<String>,
-}
-
-#[cfg(feature = "msgpack")]
-impl<'de> Deserialize<'de> for Rpc {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{Error, Unexpected};
-
-        const NOTIFICATION_MESSAGE_TYPE: u64 = 2;
-
-        let (msg_type, method, params) = <(u64, String, Vec<String>)>::deserialize(deserializer)?;
-
-        debug!("<- [{}, {}, {:?}]", msg_type, method, params);
-
-        if msg_type != NOTIFICATION_MESSAGE_TYPE {
-            return Err(Error::invalid_value(
-                Unexpected::Unsigned(msg_type),
-                &format!("notification message type ({})", NOTIFICATION_MESSAGE_TYPE).as_str(),
-            ));
-        }
-
-        Ok(Rpc {
-            msg_type,
-            method,
-            params,
-        })
-    }
-}
-
-// FIXME: Workaround for rust-lang/rust#55779. Move back to the impl when fixed.
-#[derive(Debug, Deserialize)]
-#[allow(unused)]
-struct InnerRpc {
-    method: String,
-    params: Vec<String>,
-}
-
-#[cfg(feature = "json-rpc")]
-impl<'de> Deserialize<'de> for Rpc {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let (id, rpc): (u64, InnerRpc) = Deserialize::deserialize(deserializer)?;
-
-        debug!("<- [{}, {:?}]", id, rpc);
-
-        Ok(Rpc {
-            id: id,
-            method: rpc.method,
-            params: rpc.params,
-        })
-    }
-}
-
-fn read_rpc(reader: impl Read, mut server: Server, browser: Option<&str>) -> Result<()> {
-    #[cfg(feature = "msgpack")]
-    let mut deserializer = rmp_serde::Deserializer::new(std::io::BufReader::new(reader));
-
-    #[cfg(feature = "json-rpc")]
-    let mut deserializer = serde_json::Deserializer::new(serde_json::de::IoRead::new(reader));
-
-    loop {
-        let mut rpc = match Rpc::deserialize(&mut deserializer) {
-            Ok(rpc) => rpc,
-            #[cfg(feature = "msgpack")]
-            Err(rmp_serde::decode::Error::InvalidMarkerRead(_)) => {
-                // In this case, the remote client probably just hung up.
-                break;
-            }
-            #[cfg(feature = "json-rpc")]
-            Err(err) if err.is_eof() => {
-                break;
-            }
-            Err(err) => panic!("{}", err),
-        };
-
-        let res = match &rpc.method[..] {
-            "send_data" => {
-                let markdown = mem::replace(&mut rpc.params[0], String::new());
-                server.send(markdown)
-            }
-            "open_browser" => match browser {
-                Some(browser) => server.open_specific_browser(Command::new(browser)),
-                None => server.open_browser(),
-            },
-            "chdir" => {
-                let cwd = &rpc.params[0];
-                info!("changing working directory: {}", cwd);
-                server.set_static_root(cwd);
-                Ok(())
-            }
-            method => panic!("Received unknown command: {}", method),
-        };
-
-        // TODO: Return error to the client instead of exiting the process.
-        res?;
-    }
-
-    Ok(())
-}
-
-fn main() -> Result<()> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
@@ -215,7 +102,10 @@ fn main() -> Result<()> {
         )
         .get_matches();
 
-    let mut server = Server::bind("localhost:0")?;
+    let host = tokio::net::lookup_host("localhost:0").await?
+        .next()
+        .ok_or_else(|| anyhow!("unable to lookup host"))?;
+    let mut server = Server::bind(&host).await?;
 
     if let Some(external_renderer) = matches.value_of("external-renderer") {
         let words = Shlex::new(external_renderer).collect::<Vec<_>>();
@@ -238,7 +128,8 @@ fn main() -> Result<()> {
     }
 
     if let Some(file_name) = matches.value_of("markdown-file") {
-        server.send(fs::read_to_string(file_name)?)?;
+        let contents = fs::read_to_string(file_name).await?;
+        server.send(&contents).await?;
     }
 
     let browser = matches.value_of("browser");
@@ -253,9 +144,30 @@ fn main() -> Result<()> {
     }
 
     let stdin = io::stdin();
-    let stdin_lock = stdin.lock();
 
-    read_rpc(stdin_lock, server, browser)?;
+    let mut deserialized = FramedRead::new(stdin, Decoder::default());
+
+    while let Some(rpc) = deserialized.try_next().await.unwrap() {
+        let res = match &*rpc.method {
+            "send_data" => {
+                server.send(&rpc.params[0]).await;
+            }
+            "open_browser" => match browser {
+                Some(browser) => {
+                    server.open_specific_browser(Command::new(browser));
+                }
+                None => {
+                    server.open_browser();
+                }
+            },
+            "chdir" => {
+                let cwd = &rpc.params[0];
+                info!("changing working directory: {}", cwd);
+                server.set_static_root(cwd);
+            }
+            method => panic!("Received unknown command: {}", method),
+        };
+    }
 
     Ok(())
 }
