@@ -14,10 +14,10 @@ function! s:startServer()
   endif
 
   let l:binary = get(
-    g:,
-    'markdown_composer_binary',
-    s:plugin_root . '/target/release/markdown-composer'
-  )
+			  \g:,
+			  \'markdown_composer_binary',
+			  \s:plugin_root . '/target/release/markdown-composer'
+			  \)
 
   let l:args = [l:binary]
 
