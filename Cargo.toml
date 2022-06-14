@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.56"
-aurelius = "0.7.2"
+aurelius = "0.7.4"
 clap = "2.33.0"
 log = "0.4.6"
 log-panics = { version = "2.0.0", features = ["with-backtrace"] }
