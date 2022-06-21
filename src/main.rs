@@ -102,6 +102,8 @@ async fn main() -> Result<()> {
         )
         .get_matches();
 
+    info!("starting with args: {:?}", matches);
+
     let host = tokio::net::lookup_host("localhost:0").await?
         .next()
         .ok_or_else(|| anyhow!("unable to lookup host"))?;
@@ -148,16 +150,16 @@ async fn main() -> Result<()> {
     let mut deserialized = FramedRead::new(stdin, Decoder::default());
 
     while let Some(rpc) = deserialized.try_next().await.unwrap() {
-        let res = match &*rpc.method {
+        match &*rpc.method {
             "send_data" => {
-                server.send(&rpc.params[0]).await;
+                server.send(&rpc.params[0]).await.unwrap();
             }
             "open_browser" => match browser {
                 Some(browser) => {
-                    server.open_specific_browser(Command::new(browser));
+                    server.open_specific_browser(Command::new(browser)).unwrap();
                 }
                 None => {
-                    server.open_browser();
+                    server.open_browser().unwrap();
                 }
             },
             "chdir" => {
