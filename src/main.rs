@@ -5,13 +5,13 @@
 //! rendered in the browser (no refresh is required).
 
 use std::default::Default;
-use std::error::Error;
 use std::fs;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
 use std::process::Command;
 
+use anyhow::Result;
 use clap::{crate_authors, crate_version};
 use log::*;
 
@@ -103,11 +103,7 @@ impl<'de> Deserialize<'de> for Rpc {
     }
 }
 
-fn read_rpc(
-    reader: impl Read,
-    mut server: Server,
-    browser: Option<&str>,
-) -> Result<(), Box<dyn Error>> {
+fn read_rpc(reader: impl Read, mut server: Server, browser: Option<&str>) -> Result<()> {
     #[cfg(feature = "msgpack")]
     let mut deserializer = rmp_serde::Deserializer::new(std::io::BufReader::new(reader));
 
@@ -154,7 +150,7 @@ fn read_rpc(
     Ok(())
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
@@ -270,13 +266,9 @@ fn run() -> Result<(), Box<dyn Error>> {
     let stdin = io::stdin();
     let stdin_lock = stdin.lock();
 
-    read_rpc(stdin_lock, server, browser)
-}
+    read_rpc(stdin_lock, server, browser)?;
 
-fn main() {
-    if let Err(err) = run() {
-        error!("fatal error: {}", err);
-    }
+    Ok(())
 }
 
 fn parse_command(s: &str) -> Command {

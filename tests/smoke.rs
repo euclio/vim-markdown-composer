@@ -19,7 +19,6 @@ fn send_data_rpc(cmd: &mut Command) {
     cmd.write_stdin(serde_json::to_vec(&rpc).unwrap());
 }
 
-
 #[test]
 fn rpc() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();

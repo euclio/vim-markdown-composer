@@ -33,6 +33,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34fde25430d87a9388dadbe6e34d7f72a462c8b43ac8d309b42b0a8505d7e2a5"
 
 [[package]]
+name = "anyhow"
+version = "1.0.57"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
+
+[[package]]
 name = "arc-swap"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -65,9 +71,9 @@ dependencies = [
 
 [[package]]
 name = "aurelius"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02ee21047efe512680345391206e25f80f647a1bfe939f15a4ab572c52511d91"
+checksum = "c91c14e665d60100acde76c158cbcb619fb1915b7edd2bfc2c26e19f72bf81e8"
 dependencies = [
  "base64",
  "buf_redux",
@@ -546,6 +552,7 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 name = "markdown-composer"
 version = "0.2.3"
 dependencies = [
+ "anyhow",
  "assert_cmd",
  "aurelius",
  "clap",

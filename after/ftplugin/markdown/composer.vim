@@ -13,7 +13,13 @@ function! s:startServer()
     return
   endif
 
-  let l:args = [s:plugin_root . '/target/release/markdown-composer']
+  let l:binary = get(
+			  \g:,
+			  \'markdown_composer_binary',
+			  \s:plugin_root . '/target/release/markdown-composer'
+			  \)
+
+  let l:args = [l:binary]
 
   if exists('g:markdown_composer_browser')
     call extend(l:args, ['--browser', g:markdown_composer_browser])

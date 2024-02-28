@@ -92,6 +92,14 @@ g:markdown_composer_port          *g:markdown_composer_port*
 
             Default: 0 (ephemeral)
 
+g:markdown_composer_binary              *g:markdown_composer_binary*
+            Absolute path to the markdown-composer binary. This option is
+            useful if your environment doesn't build Rust binaries in the
+            typical location. This is the case if you use Nix or if Cargo is
+            configured to use a global target directory.
+
+            Default: <plugin root>/target/release/markdown-composer
+
 COMMANDS                                *markdown-composer-commands*
 
 The plugin should start automatically whenever you open a markdown buffer.
