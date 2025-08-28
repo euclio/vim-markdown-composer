@@ -9,14 +9,13 @@ use std::fs;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
-use std::process::Command;
+use std::process::Command as ProcessCommand;
 
 use anyhow::Result;
-use clap::{crate_authors, crate_version};
+use clap::{crate_authors, crate_version, Command, Arg};
 use log::*;
 
 use aurelius::Server;
-use clap::{App, Arg};
 use serde::Deserialize;
 use shlex::Shlex;
 
@@ -131,7 +130,7 @@ fn read_rpc(reader: impl Read, mut server: Server, browser: Option<&str>) -> Res
                 server.send(markdown)
             }
             "open_browser" => match browser {
-                Some(browser) => server.open_specific_browser(Command::new(browser)),
+                Some(browser) => server.open_specific_browser(ProcessCommand::new(browser)),
                 None => server.open_browser(),
             },
             "chdir" => {
@@ -154,27 +153,28 @@ fn main() -> Result<()> {
     log_panics::init();
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();
 
-    let matches = App::new("markdown_composer")
+    let matches = Command::new("markdown_composer")
         .author(crate_authors!())
         .version(crate_version!())
         .about(ABOUT)
         .arg(
-            Arg::with_name("no-auto-open")
+            Arg::new("no-auto-open")
                 .long("no-auto-open")
-                .help("Don't open the web browser automatically."),
+                .help("Don't open the web browser automatically.")
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            Arg::with_name("browser")
+            Arg::new("browser")
                 .long("browser")
                 .value_name("executable")
                 .help(
                     "Specify a browser that the program should open. If not supplied, the program \
                    will determine the user's default browser.",
                 )
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("theme")
+            Arg::new("theme")
                 .long("highlight-theme")
                 .help(
                     "The theme to use for syntax highlighting. All highlight.js themes are \
@@ -183,79 +183,79 @@ fn main() -> Result<()> {
                 .default_value("github"),
         )
         .arg(
-            Arg::with_name("working-directory")
+            Arg::new("working-directory")
                 .long("working-directory")
                 .value_name("dir")
                 .help(
                     "The directory that static files should be served out of. All relative links \
                    in the markdown will be served relative to this directory.",
                 )
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("css")
+            Arg::new("css")
                 .long("custom-css")
                 .value_name("url/path")
                 .help(
                     "CSS that should be used to style the markdown output. Defaults to \
                    GitHub-like CSS.",
                 )
-                .takes_value(true)
-                .multiple(true),
+                .num_args(1)
+                .action(clap::ArgAction::Append),
         )
         .arg(
-            Arg::with_name("external-renderer")
+            Arg::new("external-renderer")
                 .long("external-renderer")
                 .help("An external process that should be used for rendering markdown.")
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("markdown-file")
+            Arg::new("markdown-file")
                 .help("A markdown file that should be rendered by the server on startup."),
         )
         .arg(
-            Arg::with_name("address")
+            Arg::new("address")
                 .long("address")
                 .help("The address that this server will listen on. The default value is `localhost`.")
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("port")
+            Arg::new("port")
                 .long("port")
                 .help("The port number that this server will listen on. The default value is `0 (ephemeral)`.")
-                .takes_value(true),
+                .num_args(1),
         )
         .get_matches();
 
     let mut server = Server::bind(format!(
         "{}:{}",
-        matches.value_of("address").unwrap_or("localhost"),
-        matches.value_of("port").unwrap_or("0")
+        matches.get_one::<String>("address").map(|s| s.as_str()).unwrap_or("localhost"),
+        matches.get_one::<String>("port").map(|s| s.as_str()).unwrap_or("0")
     ))?;
 
-    if let Some(external_renderer) = matches.value_of("external-renderer") {
+    if let Some(external_renderer) = matches.get_one::<String>("external-renderer") {
         server.set_external_renderer(parse_command(external_renderer));
     }
 
-    if let Some(highlight_theme) = matches.value_of("theme") {
+    if let Some(highlight_theme) = matches.get_one::<String>("theme") {
         server.set_highlight_theme(highlight_theme.to_string());
     }
 
-    if let Some(working_directory) = matches.value_of("working-directory") {
+    if let Some(working_directory) = matches.get_one::<String>("working-directory") {
         server.set_static_root(working_directory);
     }
 
-    if let Some(custom_css) = matches.values_of("css") {
-        server.set_custom_css(custom_css.map(String::from).collect())?;
+    if let Some(custom_css) = matches.get_many::<String>("css") {
+        server.set_custom_css(custom_css.map(|s| s.to_string()).collect())?;
     }
 
-    if let Some(file_name) = matches.value_of("markdown-file") {
+    if let Some(file_name) = matches.get_one::<String>("markdown-file") {
         server.send(fs::read_to_string(file_name)?)?;
     }
 
-    let browser = matches.value_of("browser");
+    let browser = matches.get_one::<String>("browser");
 
-    if !matches.is_present("no-auto-open") {
+    if !matches.get_flag("no-auto-open") {
         if let Some(browser) = browser {
             server.open_specific_browser(parse_command(browser))?;
         } else {
@@ -266,15 +266,15 @@ fn main() -> Result<()> {
     let stdin = io::stdin();
     let stdin_lock = stdin.lock();
 
-    read_rpc(stdin_lock, server, browser)?;
+    read_rpc(stdin_lock, server, browser.as_ref().map(|s| s.as_str()))?;
 
     Ok(())
 }
 
-fn parse_command(s: &str) -> Command {
+fn parse_command(s: &str) -> ProcessCommand {
     let words = Shlex::new(s).collect::<Vec<_>>();
     let (command, args) = words.split_first().expect("command was empty");
-    let mut command = Command::new(command);
+    let mut command = ProcessCommand::new(command);
     command.args(args);
     command
 }
