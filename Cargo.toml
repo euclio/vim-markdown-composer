@@ -7,11 +7,11 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.56"
-aurelius = "0.7.4"
+aurelius = "0.7.5"
 clap = "2.33.0"
 log = "0.4.6"
 log-panics = { version = "2.0.0", features = ["with-backtrace"] }
-log4rs = "0.9.0"
+log4rs = "1.4.0-rc2"
 serde = { version = "1.0.90", features = ["derive"] }
 shlex = "1.1.0"
 
